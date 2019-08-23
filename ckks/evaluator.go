@@ -1094,7 +1094,7 @@ func (evaluator *Evaluator) RescaleNew(c0 CkksElement) (cOut CkksElement, err er
 	return cOut, nil
 }
 
-// RescaleNew divides the input element by the last modulus in the modulus chain, and repeats this
+// Rescale divides the input element by the last modulus in the modulus chain, and repeats this
 // procedure until the scale reaches the original scale or would go below it, and returns the result
 // on the provided receiver element. Since all the modulie in the modulus chain are generated to be close to the
 // original scale, this procedure is equivalement to dividing the input element by the scale and adding
@@ -1109,7 +1109,7 @@ func (evaluator *Evaluator) Rescale(c0, c1 CkksElement) (err error) {
 		return errors.New("invalid receiver : ciphertexts not on the same level")
 	}
 
-	if c0.Scale() >= evaluator.ckkscontext.logQ+evaluator.ckkscontext.logScale {
+	if c0.Scale() >= evaluator.ckkscontext.scalechain[c1.Level()]+evaluator.ckkscontext.logScale {
 
 		if c0.Level() == 0 {
 			return errors.New("can't rescale, ciphertext already at level 0")
@@ -1123,7 +1123,9 @@ func (evaluator *Evaluator) Rescale(c0, c1 CkksElement) (err error) {
 			c0.Copy(c1.(*Ciphertext)) // TODO : make copy work for both plaintext and ciphertext
 		}
 
-		for c1.Scale() >= evaluator.ckkscontext.logScale+evaluator.ckkscontext.logQ && c1.Level() > 0 {
+		for c1.Scale() >= evaluator.ckkscontext.logScale+evaluator.ckkscontext.scalechain[c1.Level()] && c1.Level() > 0 {
+
+			c1.SetScale(c1.Scale() - evaluator.ckkscontext.scalechain[c1.Level()])
 
 			c1.CurrentModulus().DivRound(c1.CurrentModulus(), ring.NewUint(c1.CkksContext().modulie[c1.Level()]))
 
@@ -1131,7 +1133,6 @@ func (evaluator *Evaluator) Rescale(c0, c1 CkksElement) (err error) {
 				rescale(evaluator, c1.Value()[i], c1.Value()[i])
 			}
 
-			c1.SetScale(c1.Scale() - evaluator.ckkscontext.logQ)
 		}
 
 	} else {

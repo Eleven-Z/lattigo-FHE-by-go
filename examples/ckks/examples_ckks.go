@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/lca1/lattigo/ckks"
 	"log"
 	"math"
 	"math/cmplx"
 	"math/rand"
+
+	"github.com/lca1/lattigo/ckks"
 )
 
 func randomFloat(min, max float64) float64 {
@@ -23,16 +24,18 @@ func chebyshevinterpolation() {
 
 	// Scheme params
 	logN = 14
-	logQ = 40
-	levels = 8
-	scale = logQ
+	moduli := []uint64{59, 54, 54, 54, 54, 54, 54, 54}
+	levels = uint64(len(moduli))
+	scale = 54
 	sigma := 3.19
 
 	// Context
 	var ckkscontext *ckks.CkksContext
-	if ckkscontext, err = ckks.NewCkksContext(logN, logQ, scale, levels, sigma); err != nil {
+	if ckkscontext, err = ckks.NewCkksContext(logN, moduli, scale, sigma); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println(123)
 
 	kgen := ckkscontext.NewKeyGenerator()
 
@@ -73,7 +76,7 @@ func chebyshevinterpolation() {
 		values[i] = complex(randomFloat(-1, 1), randomFloat(-0.1, 0.1))
 	}
 
-	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d (%d bits), logPrecision = %d, logScale = %d, sigma = %f \n", logN, logQ, levels, 60+(levels-1)*logQ, ckkscontext.Precision(), scale, sigma)
+	fmt.Printf("HEAAN parameters : logN = %d, logQ = %d, levels = %d, logScale = %d, sigma = %f \n", logN, ckkscontext.LogQ(), levels, scale, sigma)
 
 	fmt.Println()
 	fmt.Printf("Values     : %6f %6f %6f %6f...\n", round(values[0]), round(values[1]), round(values[2]), round(values[3]))

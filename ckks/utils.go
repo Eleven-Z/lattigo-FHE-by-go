@@ -88,6 +88,13 @@ func Hash(data []uint64) (value []byte, err error) {
 
 }
 
+func HashBytes(data []byte) (value []byte, err error) {
+	hash, err := blake2b.New512(nil)
+	hash.Write(data)
+	value = hash.Sum(nil)
+	return
+}
+
 func VerifyHash(hash0, hash1 []byte) bool {
 	if res := bytes.Compare(hash0, hash1); res != 0 {
 		return false
@@ -158,13 +165,13 @@ func GenerateNTTPrime(logQ, logN uint64) (uint64, error) {
 	return x, nil
 }
 
-func GeneratePrimesList(logQ, logN, logP uint64) ([]uint64, error) {
+func GenerateCKKSPrimes(logQ, logN, levels uint64) ([]uint64, error) {
 
-	if logQ > 62 {
+	if logQ > 60 {
 		return nil, errors.New("error : logQ must be between 1 and 62")
 	}
 
-	var x, Qpow2, _2N, precision uint64
+	var x, y, Qpow2, _2N uint64
 
 	primes := []uint64{}
 
@@ -172,62 +179,31 @@ func GeneratePrimesList(logQ, logN, logP uint64) ([]uint64, error) {
 
 	_2N = 2 << logN
 
-	precision = 1 << logP
-
 	x = Qpow2 + 1
+	y = Qpow2 + 1
 
-	// Gets x + 1 + k*2N = 1 mod 2N to the precision upperbound
-	for (1-(float64(x)/float64(Qpow2)))*float64(precision) > -1 {
-		x += _2N
-	}
+	for true {
 
-	// Walks backward this time checking if x + 1 + k*2N is prime
-	for (1-(float64(x)/float64(Qpow2)))*float64(precision) < 1 {
+		if ring.IsPrime(y) {
+			primes = append(primes, y)
+			if uint64(len(primes)) == levels {
+				return primes, nil
+			}
+		}
 
-		x -= _2N
+		y -= _2N
 
 		if ring.IsPrime(x) {
 			primes = append(primes, x)
+			if uint64(len(primes)) == levels {
+				return primes, nil
+			}
 		}
+
+		x += _2N
 	}
 
 	return primes, nil
-}
-
-// Generates CKKS Primes byed on logQ = size of the primes, logN = size of N and level, the number
-// of levels we require. Will return all the appropriate primes, up to the number of level, with the
-// best avaliable precision for the given level.
-// TODO : choose between sorting the primes by size or by precision
-func GenerateCKKSPrimes(logQ, logN, level uint64) ([]uint64, uint64, error) {
-
-	var err error
-
-	if logQ > 62 {
-		return nil, 0, errors.New("error : logQ must be between 1 and 62")
-	}
-
-	var precision uint64
-
-	var primes []uint64
-
-	precision = logQ - 1
-
-	for precision > 0 {
-
-		primes, err = GeneratePrimesList(logQ, logN, precision)
-
-		if err != nil {
-			return nil, 0, err
-		}
-
-		if len(primes) >= int(level) {
-			return primes[:level], precision, nil
-		}
-
-		precision -= 1
-	}
-
-	return nil, 0, nil
 }
 
 func EqualSlice(a, b []uint64) bool {

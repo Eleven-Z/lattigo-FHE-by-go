@@ -133,18 +133,23 @@ func (Parameters *BasisExtender) ExtendBasis(p1, p2 *Poly) {
 		v = uint64(vi[0])
 
 		//For each Pi we sum over the Qi
+		var reduce uint64
 		for j, pj := range Parameters.contextP.Modulus {
 			xpj = 0
-
+			reduce = 0
 			for i := range Parameters.contextQ.Modulus {
 				xpj += MRed(y[i], Parameters.qispjMont[i][j], pj, Parameters.contextP.mredParams[j])
 
-				if i&7 == 6 { //Only every 7 addition, since we add one more 60 bit integer after the loop
+				if reduce&7 == 7 { //Only every 7 addition, since we add one more 60 bit integer after the loop
 					xpj = BRedAdd(xpj, pj, Parameters.contextP.bredParams[j])
 				}
 			}
 
-			p2.Coeffs[j+len(Parameters.contextQ.Modulus)][x] = BRedAdd(xpj+Parameters.qpjInv[j][v], pj, Parameters.contextP.bredParams[j])
+			if reduce&7 != 7 {
+				p2.Coeffs[j+len(Parameters.contextQ.Modulus)][x] = BRedAdd(xpj+Parameters.qpjInv[j][v], pj, Parameters.contextP.bredParams[j])
+			} else {
+				p2.Coeffs[j+len(Parameters.contextQ.Modulus)][x] = CRed(xpj+Parameters.qpjInv[j][v], pj)
+			}
 		}
 	}
 }
@@ -158,7 +163,7 @@ func (Parameters *BasisExtender) ExtendBasisApproximate(p1, p2 *Poly) {
 
 	y := make([]uint64, len(Parameters.contextQ.Modulus))
 
-	// If the receiver is equal to p1, then extend the number of modulies of p1
+	// If the receiver is equal to p1, then extend the number of moduli of p1
 	if p1 == p2 {
 		coeffsNewBase := make([][]uint64, len(Parameters.contextP.Modulus))
 		for i := 0; i < len(Parameters.contextP.Modulus); i++ {
@@ -174,6 +179,7 @@ func (Parameters *BasisExtender) ExtendBasisApproximate(p1, p2 *Poly) {
 	}
 
 	//We loop over each array of coeffs
+
 	for x := uint64(0); x < Parameters.contextQ.N; x++ {
 
 		for i, qi := range Parameters.contextQ.Modulus {
@@ -181,19 +187,26 @@ func (Parameters *BasisExtender) ExtendBasisApproximate(p1, p2 *Poly) {
 		}
 
 		//For each Pi we sum over the Qi
+		var reduce uint64
 		for j, pj := range Parameters.contextP.Modulus {
 			xpj = 0
-
+			reduce = 0
 			for i := range Parameters.contextQ.Modulus {
 
 				xpj += MRed(y[i], Parameters.qispjMont[i][j], pj, Parameters.contextP.mredParams[j])
 
-				if i&7 == 6 { //Only every 7 addition, since we add one more 60 bit integer after the loop
+				if reduce&7 == 7 {
 					xpj = BRedAdd(xpj, pj, Parameters.contextP.bredParams[j])
 				}
+
+				reduce += 1
 			}
 
-			p2.Coeffs[j+len(Parameters.contextQ.Modulus)][x] = BRedAdd(xpj, pj, Parameters.contextP.bredParams[j])
+			if reduce&7 != 7 {
+				BRedAdd(xpj, pj, Parameters.contextP.bredParams[j])
+			}
+
+			p2.Coeffs[j+len(Parameters.contextQ.Modulus)][x] = xpj
 		}
 	}
 }

@@ -1,19 +1,20 @@
 package ckks
 
 import (
+	"errors"
 	"github.com/lca1/lattigo/ring"
 	"math"
+	"math/bits"
 )
 
 type CkksContext struct {
 
 	// Context parameters
-	logN         uint64
-	logQ         uint64
-	logPrecision uint64
-	logScale     uint64
-	n            uint64
-	slots        uint64
+	logN     uint64
+	logQ     uint64
+	logScale uint64
+	n        uint64
+	slots    uint64
 
 	// Uperbound in bits of the modulie
 	maxBit uint64
@@ -31,6 +32,7 @@ type CkksContext struct {
 	keyscontext *ring.Context
 
 	// Pre-computed values for the rescaling
+	scalechain   []uint64
 	rescalParams [][]uint64
 
 	// Sampling variance
@@ -61,7 +63,7 @@ type CkksContext struct {
 
 // NewCkksContext generates a new ckkscontext, given the parameters logN, logQ, logScale (in base 2),
 // levels and sigma.
-func NewCkksContext(logN, logQ, logScale, levels uint64, sigma float64) (*CkksContext, error) {
+func NewCkksContext(logN uint64, moduliechain []uint64, logScale uint64, sigma float64) (*CkksContext, error) {
 
 	var err error
 
@@ -70,29 +72,46 @@ func NewCkksContext(logN, logQ, logScale, levels uint64, sigma float64) (*CkksCo
 	ckkscontext.logN = logN
 	ckkscontext.n = 1 << logN
 	ckkscontext.slots = 1 << (logN - 1)
-	ckkscontext.logQ = logQ
 	ckkscontext.logScale = logScale
-	ckkscontext.levels = levels
-
-	ckkscontext.maxBit = 60 // The first prime is always 60 bits to ensure some bits of precision for integers.
+	ckkscontext.levels = uint64(len(moduliechain))
 
 	// ========== START < PRIMES GENERATION > START ===============
-	// Search for suitable primes
-	if ckkscontext.modulie, ckkscontext.logPrecision, err = GenerateCKKSPrimes(logQ, logN, levels); err != nil {
-		return nil, err
+	ckkscontext.scalechain = make([]uint64, len(moduliechain))
+
+	primesbitlen := make(map[uint64]uint64)
+
+	for i := range moduliechain {
+
+		primesbitlen[moduliechain[i]] += 1
+
+		ckkscontext.scalechain[i] = moduliechain[i]
+
+		if moduliechain[i] > 60 {
+			return nil, errors.New("error : provided modulie must be smaller than 60")
+		}
 	}
 
-	// If logQ is smaller than maxBit, then computes the first prime of size maxbit.
-	var tmp []uint64
-	if logQ < ckkscontext.maxBit {
-		tmp, _, _ = GenerateCKKSPrimes(ckkscontext.maxBit, logN, 1)
+	primes := make(map[uint64][]uint64)
 
-		ckkscontext.modulie[0] = tmp[0]
+	for key, value := range primesbitlen {
+		primes[key], _ = GenerateCKKSPrimes(key, logN, value)
 	}
+
+	ckkscontext.modulie = make([]uint64, len(moduliechain))
+
+	for i := range moduliechain {
+		ckkscontext.modulie[i] = primes[moduliechain[i]][0]
+		primes[moduliechain[i]] = primes[moduliechain[i]][1:]
+
+		if uint64(bits.Len64(ckkscontext.modulie[i])) > ckkscontext.maxBit {
+			ckkscontext.maxBit = uint64(bits.Len64(ckkscontext.modulie[i]))
+		}
+	}
+
 	// ========== END < PRIMES GENERATION > END ===============
 
 	// ========== START < CONTEXTS CHAIN > START ===============
-	ckkscontext.contextLevel = make([]*ring.Context, levels)
+	ckkscontext.contextLevel = make([]*ring.Context, ckkscontext.levels)
 
 	ckkscontext.contextLevel[0] = ring.NewContext()
 
@@ -104,7 +123,7 @@ func NewCkksContext(logN, logQ, logScale, levels uint64, sigma float64) (*CkksCo
 		return nil, err
 	}
 
-	for i := uint64(1); i < levels; i++ {
+	for i := uint64(1); i < ckkscontext.levels; i++ {
 
 		ckkscontext.contextLevel[i] = ring.NewContext()
 
@@ -124,14 +143,15 @@ func NewCkksContext(logN, logQ, logScale, levels uint64, sigma float64) (*CkksCo
 	// ========== END < CONTEXTS CHAIN > END ===============
 
 	// Context used for the generation of the keys
-	ckkscontext.keyscontext = ckkscontext.contextLevel[levels-1]
+	ckkscontext.keyscontext = ckkscontext.contextLevel[ckkscontext.levels-1]
+	ckkscontext.logQ = uint64(ckkscontext.contextLevel[ckkscontext.levels-1].ModulusBigint.Value.BitLen())
 
 	// ========== START < RESCALE PRE-COMPUATION PARAMETERS > START ===============
 	var Qi, Ql uint64
 
-	ckkscontext.rescalParams = make([][]uint64, levels-1)
+	ckkscontext.rescalParams = make([][]uint64, ckkscontext.levels-1)
 
-	for j := uint64(levels) - 1; j > 0; j-- {
+	for j := ckkscontext.levels - 1; j > 0; j-- {
 
 		ckkscontext.rescalParams[j-1] = make([]uint64, j)
 
@@ -220,7 +240,7 @@ func NewCkksContext(logN, logQ, logScale, levels uint64, sigma float64) (*CkksCo
 	// ========== END < ENCODER PARAMETERS > END ================
 
 	// =========== START < CHECKSUM > =============
-	toHash := make([]uint64, 1+levels)
+	toHash := make([]uint64, 1+ckkscontext.levels)
 	toHash[0] = logN
 	for i := 1; i < len(toHash); i++ {
 		toHash[i] = ckkscontext.modulie[i-1]
@@ -235,8 +255,24 @@ func NewCkksContext(logN, logQ, logScale, levels uint64, sigma float64) (*CkksCo
 
 }
 
-func (ckkscontext *CkksContext) Precision() uint64 {
-	return ckkscontext.logPrecision
+func (ckkscontext *CkksContext) LogN() uint64 {
+	return ckkscontext.logN
+}
+
+func (ckkscontext *CkksContext) LogQ() uint64 {
+	return ckkscontext.logQ
+}
+
+func (ckkscontext *CkksContext) Modulie() []uint64 {
+	return ckkscontext.modulie
+}
+
+func (ckkscontext *CkksContext) Levels() uint64 {
+	return ckkscontext.levels
+}
+
+func (ckkscontext *CkksContext) LogScale() uint64 {
+	return ckkscontext.logScale
 }
 
 func (ckkscontext *CkksContext) ContextKeys() *ring.Context {
@@ -246,5 +282,3 @@ func (ckkscontext *CkksContext) ContextKeys() *ring.Context {
 func (ckkscontext *CkksContext) Slots() uint64 {
 	return (1 << (ckkscontext.logN - 1))
 }
-
-// TODO Get parameters
