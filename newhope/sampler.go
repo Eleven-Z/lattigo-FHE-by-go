@@ -167,10 +167,7 @@ func (kys *KYSampler) Sample(Pol *Poly) {
 
 		coeff, sign, randomBytes, pointer = kysampling(kys.Matrix, randomBytes, pointer)
 
-		for j, qi := range kys.context.Modulus {
-			Pol.Coeffs[j][i] = (coeff & (sign * 0xFFFFFFFF)) | ((qi - coeff) & ((sign ^ 1) * 0xFFFFFFFF))
-
-		}
+		Pol.Coeffs[i] = (coeff & (sign * 0xFFFFFFFF)) | ((kys.context.Modulus - coeff) & ((sign ^ 1) * 0xFFFFFFFF))
 	}
 }
 
@@ -190,8 +187,8 @@ func (kys *KYSampler) SampleNTT(Pol *Poly) {
 // TernarySampler is the structure holding the parameters for sampling polynomials of the form [-1, 0, 1].
 type TernarySampler struct {
 	context          *Context
-	Matrix           [][]uint32
-	MatrixMontgomery [][]uint32
+	Matrix           [3]uint32
+	MatrixMontgomery [3]uint32
 
 	KYMatrix [][]uint8
 }
@@ -202,21 +199,14 @@ func (context *Context) NewTernarySampler() *TernarySampler {
 	sampler := new(TernarySampler)
 	sampler.context = context
 
-	sampler.Matrix = make([][]uint32, len(context.Modulus))
-	sampler.MatrixMontgomery = make([][]uint32, len(context.Modulus))
+	sampler.Matrix[0] = 0
+	sampler.Matrix[1] = 1
+	sampler.Matrix[2] = context.Modulus - 1
 
-	for i, Qi := range context.Modulus {
+	sampler.MatrixMontgomery[0] = 0
+	sampler.MatrixMontgomery[1] = MForm(1, context.Modulus, context.bredParams)
+	sampler.MatrixMontgomery[2] = MForm(context.Modulus-1, context.Modulus, context.bredParams)
 
-		sampler.Matrix[i] = make([]uint32, 3)
-		sampler.Matrix[i][0] = 0
-		sampler.Matrix[i][1] = 1
-		sampler.Matrix[i][2] = Qi - 1
-
-		sampler.MatrixMontgomery[i] = make([]uint32, 3)
-		sampler.MatrixMontgomery[i][0] = 0
-		sampler.MatrixMontgomery[i][1] = MForm(1, Qi, context.bredParams[i])
-		sampler.MatrixMontgomery[i][2] = MForm(Qi-1, Qi, context.bredParams[i])
-	}
 
 	return sampler
 }
@@ -251,7 +241,7 @@ func computeMatrixTernary(p float64) (M [][]uint8) {
 }
 
 // SampleMontgomeryNew samples coefficients with ternary distribution in montgomery form on the target polynomial.
-func sample(context *Context, samplerMatrix [][]uint32, p float64, pol *Poly) (err error) {
+func sample(context *Context, samplerMatrix [3]uint32, p float64, pol *Poly) (err error) {
 
 	if p == 0 {
 		return errors.New("cannot sample -> p = 0")
@@ -277,9 +267,8 @@ func sample(context *Context, samplerMatrix [][]uint32, p float64, pol *Poly) (e
 			coeff = uint32(uint8(randomBytesCoeffs[i>>3])>>(i&7)) & 1
 			sign = uint32(uint8(randomBytesSign[i>>3])>>(i&7)) & 1
 
-			for j := range context.Modulus {
-				pol.Coeffs[j][i] = samplerMatrix[j][(coeff&(sign^1))|((sign&coeff)<<1)] //(coeff & (sign^1)) | (qi - 1) * (sign & coeff)
-			}
+			pol.Coeffs[i] = samplerMatrix[(coeff&(sign^1))|((sign&coeff)<<1)] //(coeff & (sign^1)) | (qi - 1) * (sign & coeff)
+
 		}
 
 	} else {
@@ -298,9 +287,8 @@ func sample(context *Context, samplerMatrix [][]uint32, p float64, pol *Poly) (e
 
 			coeff, sign, randomBytes, pointer = kysampling(matrix, randomBytes, pointer)
 
-			for j := range context.Modulus {
-				pol.Coeffs[j][i] = samplerMatrix[j][(coeff&(sign^1))|((sign&coeff)<<1)] //(coeff & (sign^1)) | (qi - 1) * (sign & coeff)
-			}
+			pol.Coeffs[i] = samplerMatrix[(coeff&(sign^1))|((sign&coeff)<<1)] //(coeff & (sign^1)) | (qi - 1) * (sign & coeff)
+
 		}
 	}
 

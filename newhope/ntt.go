@@ -2,16 +2,13 @@ package newhope
 
 // NTT performes the NTT transformation on the CRT coefficients a Polynomial, based on the target context.
 func (context *Context) NTT(p1, p2 *Poly) {
-	for x := range context.Modulus {
-		NTT(p1.Coeffs[x], p2.Coeffs[x], context.N, context.nttPsi[x], context.Modulus[x], context.mredParams[x], context.bredParams[x])
-	}
+	NTT(p1.Coeffs, p2.Coeffs, context.N, context.nttPsi, context.Modulus, context.mredParams, context.bredParams)
+
 }
 
 // InvNTT performes the inverse NTT transformation on the CRT coefficients of a polynomial, based on the target context.
 func (context *Context) InvNTT(p1, p2 *Poly) {
-	for x := range context.Modulus {
-		InvNTT(p1.Coeffs[x], p2.Coeffs[x], context.N, context.nttPsiInv[x], context.nttNInv[x], context.Modulus[x], context.mredParams[x])
-	}
+	InvNTT(p1.Coeffs, p2.Coeffs, context.N, context.nttPsiInv, context.nttNInv, context.Modulus, context.mredParams)
 }
 
 // Buttefly computes X, Y = U + V*Psi, U - V*Psi mod Q.
