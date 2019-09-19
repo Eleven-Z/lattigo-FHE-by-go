@@ -25,6 +25,8 @@ func Benchmark_newhope(b *testing.B) {
 	benchmark_BRed(context, b)
 	benchmark_BRedAdd(context, b)
 	benchmark_MRed(context, b)
+	benchmark_KRed(context, b)
+	//benchmark_KRed2x(context, b)
 
 }
 
@@ -70,3 +72,19 @@ func benchmark_MRed(context *Context, b *testing.B) {
 		}
 	})
 }
+
+func benchmark_KRed(context *Context, b *testing.B) {
+
+	x := int64(rand.Uint32() % context.Modulus)
+	y := int64(rand.Uint32() % context.Modulus)
+
+	b.ResetTimer()
+
+	b.Run(fmt.Sprintf("Q=%d/KRed", context.Modulus), func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			x = KRed(x*y)
+		}
+	})
+}
+
+

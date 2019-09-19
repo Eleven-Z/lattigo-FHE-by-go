@@ -4,6 +4,11 @@ import (
 	"math/bits"
 )
 
+// https://eprint.iacr.org/2016/504.pdf
+func KRed(C int64) (r int64) {
+	return 3* (C & 4095) - (C >> 12)
+}
+
 //============================
 //=== MONTGOMERY REDUCTION ===
 //============================
