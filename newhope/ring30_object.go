@@ -36,11 +36,11 @@ func (Pol *Poly) CopyNew() (p1 *Poly) {
 
 // Copy copies the coefficients of p0 on p1 within the given context. Requiers p1 to be as big as the target context.
 func (context *Context) Copy(p0, p1 *Poly) error {
-	if uint32(len(p1.Coeffs)) < context.N {
+	if uint32(len(p1.Coeffs)) < context.n {
 		return errors.New("error : copy Poly, receiver poly is invalide")
 	}
 
-	for i := uint32(0); i < context.N; i++ {
+	for i := uint32(0); i < context.n; i++ {
 		p1.Coeffs[i] = p0.Coeffs[i]
 	}
 

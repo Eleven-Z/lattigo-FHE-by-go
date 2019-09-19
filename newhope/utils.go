@@ -5,7 +5,7 @@ import (
 )
 
 // PowerOf2 returns (x*2^n)%q where x is in montgomery form
-func PowerOf2(x, n, q, qInv uint32) (r uint32) {
+func powerof2(x, n, q, qInv uint32) (r uint32) {
 	ahi, alo := x>>(64-n), x<<n
 	R := alo * qInv
 	H, _ := bits.Mul32(R, q)
@@ -20,37 +20,37 @@ func PowerOf2(x, n, q, qInv uint32) (r uint32) {
 //=== MODULAR EXPONENTIATION ===
 //==============================
 
-// Modexp performes the modular exponentiation x^e mod p,
+// modexp performes the modular exponentiation x^e mod p,
 // x and p are required to be a most 64 bits to avoid an overflow.
-func ModExp(x, e, p uint32) (result uint32) {
-	params := BRedParams(p)
+func modexp(x, e, p uint32) (result uint32) {
+	params := bredparam(p)
 	result = 1
 	for i := e; i > 0; i >>= 1 {
 		if i&1 == 1 {
-			result = BRed(result, x, p, params)
+			result = bred(result, x, p, params)
 		}
-		x = BRed(x, x, p, params)
+		x = bred(x, x, p, params)
 	}
 	return result
 }
 
 // modexpMontgomery performes the modular exponentiation x^e mod p,
 // where x is in montgomery form, and returns x^2 in montgomery form.
-func modexpMontgomery(x, e, q, qInv uint32, bredParams uint64) (result uint32) {
+func modexpmontgomery(x, e, q, qInv uint32, bredparam uint64) (result uint32) {
 
-	result = MForm(1, q, bredParams)
+	result = mform(1, q, bredparam)
 
 	for i := e; i > 0; i >>= 1 {
 		if i&1 == 1 {
-			result = MRed(result, x, q, qInv)
+			result = mred(result, x, q, qInv)
 		}
-		x = MRed(x, x, q, qInv)
+		x = mred(x, x, q, qInv)
 	}
 	return result
 }
 
 // bitReverse calculates the bit-reverse index. For example, given index=6 (110) and its bit-length bitLen=3, the indexReverse would be 3 (011)
-func bitReverse32(index, bitLen uint32) uint32 {
+func bitreverse32(index, bitLen uint32) uint32 {
 	return bits.Reverse32(index) >> (32 - bitLen)
 }
 
@@ -66,7 +66,7 @@ func gcd(a, b uint32) uint32 {
 }
 
 // gcdInt64 compues gcd(a,b) for a,b int64 variables.
-func gcdInt64(a, b int64) int64 {
+func gcdint64(a, b int64) int64 {
 	if a == 0 || b == 0 {
 		return 0
 	}
@@ -80,19 +80,19 @@ func gcdInt64(a, b int64) int64 {
 //===     MILLER-RABIN    ===
 //===========================
 // IsPrime applies a Miller-Rabin test on the given uint32 variable, returning true if num is probably prime, else false.
-func IsPrime(num uint32) bool {
+func isprime(num uint32) bool {
 
 	if num < 2 {
 		return false
 	}
 
-	for _, smallPrime := range smallPrimes {
+	for _, smallPrime := range smallprimes {
 		if num == smallPrime {
 			return true
 		}
 	}
 
-	for _, smallPrime := range smallPrimes {
+	for _, smallPrime := range smallprimes {
 		if num%smallPrime == 0 {
 			return false
 		}
@@ -105,13 +105,13 @@ func IsPrime(num uint32) bool {
 		k += 1
 	}
 
-	bredParams := BRedParams(num)
+	bredparam := bredparam(num)
 	var mask uint32
 	mask = (1 << uint32(bits.Len32(num))) - 1
 
 	for trial := 0; trial < 50; trial++ {
 		b := RandUniform32(num-1, mask)
-		x := ModExp(b, s, num)
+		x := modexp(b, s, num)
 		if x != 1 {
 			i := 0
 			for x != num-1 {
@@ -119,7 +119,7 @@ func IsPrime(num uint32) bool {
 					return false
 				} else {
 					i += 1
-					x = BRed(x, x, num, bredParams)
+					x = bred(x, x, num, bredparam)
 				}
 			}
 		}
@@ -132,13 +132,13 @@ func IsPrime(num uint32) bool {
 //===========================
 
 // primitiveRoot computes one primitive root (the smallest) of for the given prime q
-func primitiveRoot(q uint32) uint32 {
+func primitiveroot(q uint32) uint32 {
 	var tmp uint32
 	var g uint32
 
 	notFoundPrimitiveRoot := true
 
-	factors := getFactors(q - 1) //Factors q-1, might be slow
+	factors := getfactors(q - 1) //Factors q-1, might be slow
 
 	g = 2
 
@@ -147,7 +147,7 @@ func primitiveRoot(q uint32) uint32 {
 		for _, factor := range factors {
 			tmp = (q - 1) / factor
 			// if for any factor of q-1, g^(q-1)/factor = 1 mod q, g is not a primitive root
-			if ModExp(g, tmp, q) == 1 {
+			if modexp(g, tmp, q) == 1 {
 				notFoundPrimitiveRoot = true
 				break
 			}
@@ -161,18 +161,18 @@ func primitiveRoot(q uint32) uint32 {
 //=====   POLLARD'S RHO FACTORIZATION   =====
 //===========================================
 
-// polynomialPollardsRho calculates x1^2 + c mod x2, and is used in factorizationPollardsRho
-func polynomialPollardsRho(x1, x2, c uint32) uint32 {
+// polynomialpollardsrho calculates x1^2 + c mod x2, and is used in factorizationpollardsrho
+func polynomialpollardsrho(x1, x2, c uint32) uint32 {
 
-	z := ModExp(x1, 2, x2) // x1^2 mod x2
+	z := modexp(x1, 2, x2) // x1^2 mod x2
 	z += c                 // (x1^2 mod x2) + 1
 	z %= x2                // (x1^2 + 1) mod x2
 	return z
 }
 
-// factorizationPollardsRho realizes Pollard's Rho algorithm for fast prime factorization,
+// factorizationpollardsrho realizes Pollard's Rho algorithm for fast prime factorization,
 // but this function only returns one factor a time
-func factorizationPollardsRho(m uint32) uint32 {
+func factorizationpollardsrho(m uint32) uint32 {
 	var x, y, d, c uint32
 
 	// c is to change the ring used in Pollard's Rho algorithm,
@@ -185,8 +185,8 @@ func factorizationPollardsRho(m uint32) uint32 {
 		for d != 0 {
 
 			//Walk, walk and eventualy meet \o/
-			x = polynomialPollardsRho(x, m, c)
-			y = polynomialPollardsRho(polynomialPollardsRho(y, m, c), m, c)
+			x = polynomialpollardsrho(x, m, c)
+			y = polynomialpollardsrho(polynomialpollardsrho(y, m, c), m, c)
 
 			if y > x {
 				x, y = y, x
@@ -201,15 +201,15 @@ func factorizationPollardsRho(m uint32) uint32 {
 }
 
 // getFactors returns all the prime factors of m.
-func getFactors(n uint32) []uint32 {
+func getfactors(n uint32) []uint32 {
 	var factor uint32
 	var factors []uint32
 	var m uint32
 	m = n
 
 	// first, append small prime factors
-	for i := range smallPrimes {
-		smallPrime := smallPrimes[i]
+	for i := range smallprimes {
+		smallPrime := smallprimes[i]
 		addFactor := false
 		for m%smallPrime == 0 {
 			m /= smallPrime
@@ -226,7 +226,7 @@ func getFactors(n uint32) []uint32 {
 
 	// second, find other prime factors
 	for {
-		factor = factorizationPollardsRho(m)
+		factor = factorizationpollardsrho(m)
 		if factor == 0 {
 			factors = append(factors, m)
 			break
@@ -240,7 +240,7 @@ func getFactors(n uint32) []uint32 {
 	return factors
 }
 
-var smallPrimes = []uint32{
+var smallprimes = []uint32{
 	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
 	73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
 	179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281,

@@ -5,22 +5,30 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+	"log"
 )
 
 func Test_newhope(t *testing.T) {
+
+	var err error
 
 	rand.Seed(time.Now().UnixNano())
 
 	var N, Q uint32
 
-	N = 4
+	N = 1024
 	Q = 12289
 
 	//sigma := 3.19
 
 	context := NewContext()
-	context.SetParameters(N, Q)
-	context.ValidateParameters()
+	if err = context.SetParameters(N, Q) ; err != nil {
+		log.Fatal(err)
+	}
+
+	if err = context.ValidateParameters() ; err != nil {
+		log.Fatal(err)
+	}
 
 	test_BRed(context, t)
 	test_BRedAdd(context, t)
@@ -33,17 +41,17 @@ func Test_newhope(t *testing.T) {
 
 func test_BRed(context *Context, t *testing.T) {
 
-	t.Run(fmt.Sprintf("N=%d/Q=%d/BRed", context.N, context.Modulus), func(t *testing.T) {
+	t.Run(fmt.Sprintf("N=%d/Q=%d/bred", context.n, context.q), func(t *testing.T) {
 
 		var x, y uint32
 		var z uint64
 
 		for i := 0; i < 0x10000; i++ {
-			x = rand.Uint32() % context.Modulus
-			y = rand.Uint32() % context.Modulus
-			z = (uint64(x) * uint64(y)) % uint64(context.Modulus)
+			x = rand.Uint32() % context.q
+			y = rand.Uint32() % context.q
+			z = (uint64(x) * uint64(y)) % uint64(context.q)
 
-			test := BRed(x, y, context.Modulus, context.bredParams)
+			test := bred(x, y, context.q, context.bredparam)
 
 			if test != uint32(z) {
 				t.Errorf("error : 128bit barrett multiplication, x = %v, y=%v, have = %v, want =%v", x, y, test, z)
@@ -55,17 +63,17 @@ func test_BRed(context *Context, t *testing.T) {
 
 func test_BRedAdd(context *Context, t *testing.T) {
 
-	t.Run(fmt.Sprintf("N=%d/Q=%d/BRedAdd", context.N, context.Modulus), func(t *testing.T) {
+	t.Run(fmt.Sprintf("N=%d/Q=%d/bredadd", context.n, context.q), func(t *testing.T) {
 
 		var x, y uint32
 		var z uint64
 
 		for i := 0; i < 0x10000; i++ {
-			x = rand.Uint32() % context.Modulus
-			y = rand.Uint32() % context.Modulus
-			z = (uint64(x) + uint64(y)) % uint64(context.Modulus)
+			x = rand.Uint32() % context.q
+			y = rand.Uint32() % context.q
+			z = (uint64(x) + uint64(y)) % uint64(context.q)
 
-			test := BRedAdd(x+y, context.Modulus, context.bredParams)
+			test := bredadd(x+y, context.q, context.bredparam)
 
 			if test != uint32(z) {
 				t.Errorf("error : 128bit barrett multiplication, x = %v, y=%v, have = %v, want =%v", x, y, test, z)
@@ -77,17 +85,17 @@ func test_BRedAdd(context *Context, t *testing.T) {
 
 func test_MRed(context *Context, t *testing.T) {
 
-	t.Run(fmt.Sprintf("N=%d/Q=%d/MRed", context.N, context.Modulus), func(t *testing.T) {
+	t.Run(fmt.Sprintf("N=%d/Q=%d/mred", context.n, context.q), func(t *testing.T) {
 
 		var x, y uint32
 		var z uint64
 
 		for i := 0; i < 0x10000; i++ {
-			x = rand.Uint32() % context.Modulus
-			y = rand.Uint32() % context.Modulus
-			z = (uint64(x) * uint64(y)) % uint64(context.Modulus)
+			x = rand.Uint32() % context.q
+			y = rand.Uint32() % context.q
+			z = (uint64(x) * uint64(y)) % uint64(context.q)
 
-			test := MRed(x, MForm(y, context.Modulus, context.bredParams), context.Modulus, context.mredParams)
+			test := mred(x, mform(y, context.q, context.bredparam), context.q, context.mredparam)
 
 			if test != uint32(z) {
 				t.Errorf("error : 128bit barrett multiplication, x = %v, y=%v, have = %v, want =%v", x, y, test, z)
@@ -99,7 +107,7 @@ func test_MRed(context *Context, t *testing.T) {
 
 func test_MulPoly(context *Context, t *testing.T) {
 
-	t.Run(fmt.Sprintf("N=%d/Q=%d/MulPoly", context.N, context.Modulus), func(t *testing.T) {
+	t.Run(fmt.Sprintf("N=%d/Q=%d/MulPoly", context.n, context.q), func(t *testing.T) {
 
 		p1 := context.NewUniformPoly()
 		p2 := context.NewUniformPoly()
@@ -110,7 +118,7 @@ func test_MulPoly(context *Context, t *testing.T) {
 		context.MulPolyNaive(p1, p2, p3Want)
 		context.MulPoly(p1, p2, p3Test)
 
-		for i := uint32(0); i < context.N; i++ {
+		for i := uint32(0); i < context.n; i++ {
 			if p3Want.Coeffs[i] != p3Test.Coeffs[i] {
 				t.Errorf("ERROR MUL COEFF %v, want %v - has %v", i, p3Want.Coeffs[i], p3Test.Coeffs[i])
 				break
@@ -121,7 +129,7 @@ func test_MulPoly(context *Context, t *testing.T) {
 
 func test_MulPoly_Montgomery(context *Context, t *testing.T) {
 
-	t.Run(fmt.Sprintf("N=%d/Q=%d/MulPoly_Montgomery", context.N, context.Modulus), func(t *testing.T) {
+	t.Run(fmt.Sprintf("N=%d/Q=%d/MulPoly_Montgomery", context.n, context.q), func(t *testing.T) {
 		p1 := context.NewUniformPoly()
 		p2 := context.NewUniformPoly()
 
@@ -137,7 +145,7 @@ func test_MulPoly_Montgomery(context *Context, t *testing.T) {
 		context.InvMForm(p3Test, p3Test)
 		context.InvMForm(p3Want, p3Want)
 
-		for i := uint32(0); i < context.N; i++ {
+		for i := uint32(0); i < context.n; i++ {
 			if p3Want.Coeffs[i] != p3Test.Coeffs[i] {
 				t.Errorf("ERROR MUL COEFF %v, want %v - has %v", i, p3Want.Coeffs[i], p3Test.Coeffs[i])
 				break

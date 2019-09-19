@@ -1,38 +1,38 @@
 package newhope
 
-// NTT performes the NTT transformation on the CRT coefficients a Polynomial, based on the target context.
+// ntt performes the ntt transformation on the CRT coefficients a Polynomial, based on the target context.
 func (context *Context) NTT(p1, p2 *Poly) {
-	NTT(p1.Coeffs, p2.Coeffs, context.N, context.nttPsi, context.Modulus, context.mredParams, context.bredParams)
+	ntt(p1.Coeffs, p2.Coeffs, context.n, context.nttPsi, context.q, context.mredparam, context.bredparam)
 }
 
-// InvNTT performes the inverse NTT transformation on the CRT coefficients of a polynomial, based on the target context.
+// Invntt performes the inverse ntt transformation on the CRT coefficients of a polynomial, based on the target context.
 func (context *Context) InvNTT(p1, p2 *Poly) {
-	InvNTT(p1.Coeffs, p2.Coeffs, context.N, context.nttPsiInv, context.nttNInv, context.Modulus, context.mredParams)
+	invntt(p1.Coeffs, p2.Coeffs, context.n, context.nttPsiInv, context.nttNInv, context.q, context.mredparam)
 }
 
 // Buttefly computes X, Y = U + V*Psi, U - V*Psi mod Q.
-func Butterfly(U, V, Psi, Q, Qinv uint32) (X, Y uint32) {
+func butterfly(U, V, Psi, Q, Qinv uint32) (X, Y uint32) {
 	if U > 2*Q {
 		U -= 2 * Q
 	}
-	V = MRedConstant(V, Psi, Q, Qinv)
+	V = mredconstant(V, Psi, Q, Qinv)
 	X = U + V
 	Y = U + 2*Q - V
 	return
 }
 
-// InvButterfly computes X, Y = U + V, (U - V) * Psi mod Q.
-func InvButterfly(U, V, Psi, Q, Qinv uint32) (X, Y uint32) {
+// invbutterfly computes X, Y = U + V, (U - V) * Psi mod Q.
+func invbutterfly(U, V, Psi, Q, Qinv uint32) (X, Y uint32) {
 	X = U + V
 	if X > 2*Q {
 		X -= 2 * Q
 	}
-	Y = MRedConstant(U+2*Q-V, Psi, Q, Qinv) // At the moment it is not possible to use MRedConstant if Q > 61 bits
+	Y = mredconstant(U+2*Q-V, Psi, Q, Qinv) // At the moment it is not possible to use mredconstant if Q > 61 bits
 	return
 }
 
-// NTT computes the NTT transformation on the input coefficients given the provided params.
-func NTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsi []uint32, Q, mredParams uint32, bredParams uint64) {
+// ntt computes the ntt transformation on the input coefficients given the provided params.
+func ntt(coeffs_in, coeffs_out []uint32, N uint32, nttPsi []uint32, Q, mredParams uint32, bredParams uint64) {
 	var j1, j2, t uint32
 	var F uint32
 
@@ -41,7 +41,7 @@ func NTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsi []uint32, Q, mredParam
 	j2 = t - 1
 	F = nttPsi[1]
 	for j := uint32(0); j <= j2; j++ {
-		coeffs_out[j], coeffs_out[j+t] = Butterfly(coeffs_in[j], coeffs_in[j+t], F, Q, mredParams)
+		coeffs_out[j], coeffs_out[j+t] = butterfly(coeffs_in[j], coeffs_in[j+t], F, Q, mredParams)
 	}
 
 	// Continues the rest of the second to the n-1 butterflies on p2 with approximate reduction
@@ -56,19 +56,19 @@ func NTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsi []uint32, Q, mredParam
 			F = nttPsi[m+i]
 
 			for j := j1; j <= j2; j++ {
-				coeffs_out[j], coeffs_out[j+t] = Butterfly(coeffs_out[j], coeffs_out[j+t], F, Q, mredParams)
+				coeffs_out[j], coeffs_out[j+t] = butterfly(coeffs_out[j], coeffs_out[j+t], F, Q, mredParams)
 			}
 		}
 	}
 
 	// Finishes with an exact reduction
 	for i := uint32(0); i < N; i++ {
-		coeffs_out[i] = BRedAdd(coeffs_out[i], Q, bredParams)
+		coeffs_out[i] = bredadd(coeffs_out[i], Q, bredParams)
 	}
 }
 
-// InvNTT computes the InvNTT transformation on the input coefficients given the provided params.
-func InvNTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsiInv []uint32, nttNInv, Q, mredParams uint32) {
+// Invntt computes the Invntt transformation on the input coefficients given the provided params.
+func invntt(coeffs_in, coeffs_out []uint32, N uint32, nttPsiInv []uint32, nttNInv, Q, mredParams uint32) {
 
 	var j1, j2, h, t uint32
 	var F uint32
@@ -85,7 +85,7 @@ func InvNTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsiInv []uint32, nttNIn
 		F = nttPsiInv[h+i]
 
 		for j := j1; j <= j2; j++ {
-			coeffs_out[j], coeffs_out[j+t] = InvButterfly(coeffs_in[j], coeffs_in[j+t], F, Q, mredParams)
+			coeffs_out[j], coeffs_out[j+t] = invbutterfly(coeffs_in[j], coeffs_in[j+t], F, Q, mredParams)
 		}
 
 		j1 = j1 + (t << 1)
@@ -105,7 +105,7 @@ func InvNTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsiInv []uint32, nttNIn
 			F = nttPsiInv[h+i]
 
 			for j := j1; j <= j2; j++ {
-				coeffs_out[j], coeffs_out[j+t] = InvButterfly(coeffs_out[j], coeffs_out[j+t], F, Q, mredParams)
+				coeffs_out[j], coeffs_out[j+t] = invbutterfly(coeffs_out[j], coeffs_out[j+t], F, Q, mredParams)
 			}
 
 			j1 = j1 + (t << 1)
@@ -116,6 +116,6 @@ func InvNTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsiInv []uint32, nttNIn
 
 	// Finishes with an exact reduction given
 	for j := uint32(0); j < N; j++ {
-		coeffs_out[j] = MRed(coeffs_out[j], nttNInv, Q, mredParams)
+		coeffs_out[j] = mred(coeffs_out[j], nttNInv, Q, mredParams)
 	}
 }

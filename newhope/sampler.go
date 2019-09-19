@@ -163,11 +163,11 @@ func (kys *KYSampler) Sample(Pol *Poly) {
 		panic("crypto rand error")
 	}
 
-	for i := uint32(0); i < kys.context.N; i++ {
+	for i := uint32(0); i < kys.context.n; i++ {
 
 		coeff, sign, randomBytes, pointer = kysampling(kys.Matrix, randomBytes, pointer)
 
-		Pol.Coeffs[i] = (coeff & (sign * 0xFFFFFFFF)) | ((kys.context.Modulus - coeff) & ((sign ^ 1) * 0xFFFFFFFF))
+		Pol.Coeffs[i] = (coeff & (sign * 0xFFFFFFFF)) | ((kys.context.q - coeff) & ((sign ^ 1) * 0xFFFFFFFF))
 	}
 }
 
@@ -201,11 +201,11 @@ func (context *Context) NewTernarySampler() *TernarySampler {
 
 	sampler.Matrix[0] = 0
 	sampler.Matrix[1] = 1
-	sampler.Matrix[2] = context.Modulus - 1
+	sampler.Matrix[2] = context.q - 1
 
 	sampler.MatrixMontgomery[0] = 0
-	sampler.MatrixMontgomery[1] = MForm(1, context.Modulus, context.bredParams)
-	sampler.MatrixMontgomery[2] = MForm(context.Modulus-1, context.Modulus, context.bredParams)
+	sampler.MatrixMontgomery[1] = mform(1, context.q, context.bredparam)
+	sampler.MatrixMontgomery[2] = mform(context.q-1, context.q, context.bredparam)
 
 	return sampler
 }
@@ -251,8 +251,8 @@ func sample(context *Context, samplerMatrix [3]uint32, p float64, pol *Poly) (er
 
 	if p == 0.5 {
 
-		randomBytesCoeffs := make([]byte, context.N>>3)
-		randomBytesSign := make([]byte, context.N>>3)
+		randomBytesCoeffs := make([]byte, context.n>>3)
+		randomBytesSign := make([]byte, context.n>>3)
 
 		if _, err := rand.Read(randomBytesCoeffs); err != nil {
 			panic("crypto rand error")
@@ -262,7 +262,7 @@ func sample(context *Context, samplerMatrix [3]uint32, p float64, pol *Poly) (er
 			panic("crypto rand error")
 		}
 
-		for i := uint32(0); i < context.N; i++ {
+		for i := uint32(0); i < context.n; i++ {
 			coeff = uint32(uint8(randomBytesCoeffs[i>>3])>>(i&7)) & 1
 			sign = uint32(uint8(randomBytesSign[i>>3])>>(i&7)) & 1
 
@@ -282,7 +282,7 @@ func sample(context *Context, samplerMatrix [3]uint32, p float64, pol *Poly) (er
 			panic("crypto rand error")
 		}
 
-		for i := uint32(0); i < context.N; i++ {
+		for i := uint32(0); i < context.n; i++ {
 
 			coeff, sign, randomBytes, pointer = kysampling(matrix, randomBytes, pointer)
 

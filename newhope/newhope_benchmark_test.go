@@ -32,14 +32,14 @@ func Benchmark_newhope(b *testing.B) {
 
 func benchmark_BRed(context *Context, b *testing.B) {
 
-	x := rand.Uint32() % context.Modulus
-	y := rand.Uint32() % context.Modulus
+	x := rand.Uint32() % context.q
+	y := rand.Uint32() % context.q
 
 	b.ResetTimer()
 
-	b.Run(fmt.Sprintf("Q=%d/BRed", context.Modulus), func(b *testing.B) {
+	b.Run(fmt.Sprintf("Q=%d/bred", context.q), func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			x = BRed(x, y, context.Modulus, context.bredParams)
+			x = bred(x, y, context.q, context.bredparam)
 		}
 	})
 }
@@ -50,39 +50,39 @@ func benchmark_BRedAdd(context *Context, b *testing.B) {
 
 	b.ResetTimer()
 
-	b.Run(fmt.Sprintf("Q=%dbit/BRedAdd", context.Modulus), func(b *testing.B) {
+	b.Run(fmt.Sprintf("Q=%dbit/bredadd", context.q), func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			BRedAdd(x, context.Modulus, context.bredParams)
+			bredadd(x, context.q, context.bredparam)
 		}
 	})
 }
 
 func benchmark_MRed(context *Context, b *testing.B) {
 
-	x := rand.Uint32() % context.Modulus
-	y := rand.Uint32() % context.Modulus
+	x := rand.Uint32() % context.q
+	y := rand.Uint32() % context.q
 
-	y = MForm(y, context.Modulus, context.bredParams)
+	y = mform(y, context.q, context.bredparam)
 
 	b.ResetTimer()
 
-	b.Run(fmt.Sprintf("Q=%d/MRed", context.Modulus), func(b *testing.B) {
+	b.Run(fmt.Sprintf("Q=%d/MRed", context.q), func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			x = MRed(x, y, context.Modulus, context.mredParams)
+			x = mred(x, y, context.q, context.mredparam)
 		}
 	})
 }
 
 func benchmark_KRed(context *Context, b *testing.B) {
 
-	x := int64(rand.Uint32() % context.Modulus)
-	y := int64(rand.Uint32() % context.Modulus)
+	x := int64(rand.Uint32() % context.q)
+	y := int64(rand.Uint32() % context.q)
 
 	b.ResetTimer()
 
-	b.Run(fmt.Sprintf("Q=%d/KRed", context.Modulus), func(b *testing.B) {
+	b.Run(fmt.Sprintf("Q=%d/KRed", context.q), func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			x = KRed(x*y)
+			x = kred(x*y)
 		}
 	})
 }

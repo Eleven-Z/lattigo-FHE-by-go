@@ -1,4 +1,3 @@
-// Package ring implelents a RNS-accelerated modular arithmetic operations for polynomials, including: RNS basis extension; RNS rescaling;  number theoretic transform (NTT); uniform, Gaussian and ternary sampling.
 package newhope
 
 import (
@@ -13,14 +12,14 @@ import (
 //==============================
 
 // Context is a structure keeping all the variable required to operate on a polynomial represented in this context.
-// This include its moduli, crt reconstruction, modular reduction and ntt transformation.
+// This include its modulus, modular reduction and ntt transformation.
 type Context struct {
 
 	// Polynomial nb.Coefficients
-	N uint32
+	n uint32
 
-	// Moduli
-	Modulus uint32
+	// Modulus
+	q uint32
 
 	// 2^bit_length(Qi) - 1
 	mask uint32
@@ -29,8 +28,8 @@ type Context struct {
 	validated bool
 
 	// Fast reduction parameters
-	bredParams uint64
-	mredParams uint32
+	bredparam uint64
+	mredparam uint32
 
 	//NTT Parameters
 	psiMont    uint32 //2nth primitive root in montgomery form
@@ -38,7 +37,7 @@ type Context struct {
 
 	nttPsi    []uint32 //powers of the inverse of the 2nth primitive root in montgomery form (in bitreversed order)
 	nttPsiInv []uint32 //powers of the inverse of the 2nth primitive root in montgomery form (in bitreversed order)
-	nttNInv   uint32   //[N^-1] mod Qi in montgomery form
+	nttNInv   uint32   //[N^-1] mod q in montgomery form
 }
 
 // NewContext generates a new empty context.
@@ -57,25 +56,25 @@ func (context *Context) SetParameters(N uint32, Q uint32) error {
 
 	context.validated = false
 
-	context.N = N
+	context.n = N
 
-	context.Modulus = Q
+	context.q = Q
 
 	context.mask = (1 << uint32(bits.Len32(Q))) - 1
 
 	//Computes the fast modular reduction parameters for the Context
-	context.bredParams = BRedParams(Q)
+	context.bredparam = bredparam(Q)
 
-	// If qi is not a power of 2, we can compute the MRedParams (else it should not
+	// If qi is not a power of 2, we can compute the mredparams (else it should not
 	// because it will return an error and there is no valid montgomery form mod a power of 2)
 	if (Q&(Q-1)) != 0 && Q != 0 {
-		context.mredParams = MRedParams(Q)
+		context.mredparam = mredparam(Q)
 	}
 
 	return nil
 }
 
-// ValidateParameters checks that N has beed correctly initialized, and checks that each moduli is a prime congruent to 1 mod 2N (i.e. allowing NTT).
+// ValidateParameters checks that N has beed correctly initialized, and checks that the modulus is a prime congruent to 1 mod 2N (i.e. allowing NTT).
 // Then it computes the variables required for the NTT. ValidateParameters purpose is to validate that the moduli allow the NTT and compute the
 // NTT parameters.
 func (context *Context) ValidateParameters() error {
@@ -84,56 +83,56 @@ func (context *Context) ValidateParameters() error {
 		return nil
 	}
 
-	if context.N == 0 || context.Modulus == 0 {
+	if context.n == 0 || context.q == 0 {
 		return errors.New("error : invalid context parameters (missing)")
 	}
 
 	// CHECKS IF VALIDE NTT
 	// Checks if each qi is Prime and if qi = 1 mod 2n
 
-	if IsPrime(context.Modulus) == false || context.Modulus&((context.N<<1)-1) != 1 {
+	if isprime(context.q) == false || context.q&((context.n<<1)-1) != 1 {
 		context.validated = false
-		return errors.New("warning : provided modulus does not allow NTT")
+		return errors.New("warning : provided q does not allow NTT")
 	}
 
-	context.nttPsi = make([]uint32, context.N)
-	context.nttPsiInv = make([]uint32, context.N)
+	context.nttPsi = make([]uint32, context.n)
+	context.nttPsiInv = make([]uint32, context.n)
 
-	bitLenofN := uint32(bits.Len32(context.N) - 1)
+	bitLenofN := uint32(bits.Len32(context.n) - 1)
 
 	//2.1 Computes N^(-1) mod Q in Montgomery form
-	context.nttNInv = MForm(ModExp(context.N, context.Modulus-2, context.Modulus), context.Modulus, context.bredParams)
+	context.nttNInv = mform(modexp(context.n, context.q-2, context.q), context.q, context.bredparam)
 
 	//2.2 Computes Psi and PsiInv in Montgomery form
-	context.nttPsi = make([]uint32, context.N)
-	context.nttPsiInv = make([]uint32, context.N)
+	context.nttPsi = make([]uint32, context.n)
+	context.nttPsiInv = make([]uint32, context.n)
 
 	//Finds a 2nth primitive Root
-	g := primitiveRoot(context.Modulus)
+	g := primitiveroot(context.q)
 
-	_2n := uint32(context.N << 1)
+	_2n := uint32(context.n << 1)
 
-	power := (context.Modulus - 1) / _2n
-	powerInv := (context.Modulus - 1) - power
+	power := (context.q - 1) / _2n
+	powerInv := (context.q - 1) - power
 
 	//Computes Psi and PsiInv in Montgomery Form
-	PsiMont := MForm(ModExp(g, power, context.Modulus), context.Modulus, context.bredParams)
-	PsiInvMont := MForm(ModExp(g, powerInv, context.Modulus), context.Modulus, context.bredParams)
+	PsiMont := mform(modexp(g, power, context.q), context.q, context.bredparam)
+	PsiInvMont := mform(modexp(g, powerInv, context.q), context.q, context.bredparam)
 
 	context.psiMont = PsiMont
 	context.psiInvMont = PsiInvMont
 
-	context.nttPsi[0] = MForm(1, context.Modulus, context.bredParams)
-	context.nttPsiInv[0] = MForm(1, context.Modulus, context.bredParams)
+	context.nttPsi[0] = mform(1, context.q, context.bredparam)
+	context.nttPsiInv[0] = mform(1, context.q, context.bredparam)
 
 	// Computes nttPsi[j] = nttPsi[j-1]*Psi and nttPsiInv[j] = nttPsiInv[j-1]*PsiInv
-	for j := uint32(1); j < context.N; j++ {
+	for j := uint32(1); j < context.n; j++ {
 
-		indexReversePrev := bitReverse32(j-1, bitLenofN)
-		indexReverseNext := bitReverse32(j, bitLenofN)
+		indexReversePrev := bitreverse32(j-1, bitLenofN)
+		indexReverseNext := bitreverse32(j, bitLenofN)
 
-		context.nttPsi[indexReverseNext] = MRed(context.nttPsi[indexReversePrev], PsiMont, context.Modulus, context.mredParams)
-		context.nttPsiInv[indexReverseNext] = MRed(context.nttPsiInv[indexReversePrev], PsiInvMont, context.Modulus, context.mredParams)
+		context.nttPsi[indexReverseNext] = mred(context.nttPsi[indexReversePrev], PsiMont, context.q, context.mredparam)
+		context.nttPsiInv[indexReverseNext] = mred(context.nttPsiInv[indexReversePrev], PsiInvMont, context.q, context.mredparam)
 	}
 
 	context.validated = true
@@ -141,19 +140,29 @@ func (context *Context) ValidateParameters() error {
 	return nil
 }
 
+// N returns the ring degree
+func (context *Context) N() uint32 {
+	return context.n
+}
+
+// Modulus returns the ring modulus
+func (context *Context) Modulus() uint32 {
+	return context.q
+}
+
 // IsValidated returns true if the context has been validated (for NTT), else false.
 func (context *Context) IsValidated() bool {
 	return context.validated
 }
 
-// GetBRedParams returns the Barret reduction parameters of the context.
-func (context *Context) GetBredParams() uint64 {
-	return context.bredParams
+// Getbredparam returns the Barret reduction parameters of the context.
+func (context *Context) Getbredparam() uint64 {
+	return context.bredparam
 }
 
-// GetMredParams returns the Montgomery reduction parameters of the context.
-func (context *Context) GetMredParams() uint32 {
-	return context.mredParams
+// Getmredparams returns the Montgomery reduction parameters of the context.
+func (context *Context) Getmredparams() uint32 {
+	return context.mredparam
 }
 
 // GetPsi returns the primitive root used to compute the NTT parameters of the context.
@@ -185,12 +194,12 @@ func (context *Context) GetNttNInv() uint32 {
 func (context *Context) NewPoly() *Poly {
 	p := new(Poly)
 
-	p.Coeffs = make([]uint32, context.N)
+	p.Coeffs = make([]uint32, context.n)
 
 	return p
 }
 
-// NewUniformPoly generates a new polynomial with coefficients following a uniform distribution over [0, Qi-1]
+// NewUniformPoly generates a new polynomial with coefficients following a uniform distribution over [0, q-1]
 func (context *Context) NewUniformPoly() (Pol *Poly) {
 
 	var randomBytes []byte
@@ -198,7 +207,7 @@ func (context *Context) NewUniformPoly() (Pol *Poly) {
 
 	Pol = context.NewPoly()
 
-	n := context.N
+	n := context.n
 	if n < 4 {
 		n = 4
 	}
@@ -208,10 +217,10 @@ func (context *Context) NewUniformPoly() (Pol *Poly) {
 		panic("crypto rand error")
 	}
 
-	// Iterates for each modulus over each coefficient
-	for i := uint32(0); i < context.N; i++ {
+	// Iterates for each q over each coefficient
+	for i := uint32(0); i < context.n; i++ {
 
-		// Samples an integer between [0, qi-1]
+		// Samples an integer between [0, q-1]
 		for {
 
 			// Replenishes the pool if it runs empty
@@ -226,8 +235,8 @@ func (context *Context) NewUniformPoly() (Pol *Poly) {
 			randomUint = binary.BigEndian.Uint32(randomBytes[:4]) & context.mask
 			randomBytes = randomBytes[4:] // Discard the used bytes
 
-			// If the integer is between [0, Q-1], breaks the loop
-			if randomUint < context.Modulus {
+			// If the integer is between [0, q-1], breaks the loop
+			if randomUint < context.q {
 				break
 			}
 		}
