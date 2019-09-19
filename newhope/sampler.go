@@ -207,7 +207,6 @@ func (context *Context) NewTernarySampler() *TernarySampler {
 	sampler.MatrixMontgomery[1] = MForm(1, context.Modulus, context.bredParams)
 	sampler.MatrixMontgomery[2] = MForm(context.Modulus-1, context.Modulus, context.bredParams)
 
-
 	return sampler
 }
 

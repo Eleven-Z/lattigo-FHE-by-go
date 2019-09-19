@@ -16,7 +16,6 @@ func (Pol *Poly) GetDegree() int {
 	return len(Pol.Coeffs)
 }
 
-
 // Zero sets all coefficient of the target polynomial to 0.
 func (Pol *Poly) Zero() {
 	for i := range Pol.Coeffs {
@@ -30,7 +29,7 @@ func (Pol *Poly) CopyNew() (p1 *Poly) {
 	p1.Coeffs = make([]uint32, len(Pol.Coeffs))
 	for i := range Pol.Coeffs {
 		p1.Coeffs[i] = Pol.Coeffs[i]
-	
+
 	}
 	return p1
 }
@@ -80,7 +79,6 @@ func DecodeCoeffs(pointer, N uint32, coeffs []uint32, data []byte) (uint32, erro
 
 	return pointer, nil
 }
-
 
 func (Pol *Poly) MarshalBinary() ([]byte, error) {
 

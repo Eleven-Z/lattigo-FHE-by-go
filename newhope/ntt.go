@@ -3,7 +3,6 @@ package newhope
 // NTT performes the NTT transformation on the CRT coefficients a Polynomial, based on the target context.
 func (context *Context) NTT(p1, p2 *Poly) {
 	NTT(p1.Coeffs, p2.Coeffs, context.N, context.nttPsi, context.Modulus, context.mredParams, context.bredParams)
-
 }
 
 // InvNTT performes the inverse NTT transformation on the CRT coefficients of a polynomial, based on the target context.
@@ -33,7 +32,7 @@ func InvButterfly(U, V, Psi, Q, Qinv uint32) (X, Y uint32) {
 }
 
 // NTT computes the NTT transformation on the input coefficients given the provided params.
-func NTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsi []uint32, Q, mredParams uint32, bredParams []uint32) {
+func NTT(coeffs_in, coeffs_out []uint32, N uint32, nttPsi []uint32, Q, mredParams uint32, bredParams uint64) {
 	var j1, j2, t uint32
 	var F uint32
 

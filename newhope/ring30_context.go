@@ -29,7 +29,7 @@ type Context struct {
 	validated bool
 
 	// Fast reduction parameters
-	bredParams []uint32
+	bredParams uint64
 	mredParams uint32
 
 	//NTT Parameters
@@ -99,9 +99,7 @@ func (context *Context) ValidateParameters() error {
 	context.nttPsi = make([]uint32, context.N)
 	context.nttPsiInv = make([]uint32, context.N)
 
-
 	bitLenofN := uint32(bits.Len32(context.N) - 1)
-
 
 	//2.1 Computes N^(-1) mod Q in Montgomery form
 	context.nttNInv = MForm(ModExp(context.N, context.Modulus-2, context.Modulus), context.Modulus, context.bredParams)
@@ -143,15 +141,13 @@ func (context *Context) ValidateParameters() error {
 	return nil
 }
 
-
-
 // IsValidated returns true if the context has been validated (for NTT), else false.
 func (context *Context) IsValidated() bool {
 	return context.validated
 }
 
 // GetBRedParams returns the Barret reduction parameters of the context.
-func (context *Context) GetBredParams() []uint32 {
+func (context *Context) GetBredParams() uint64 {
 	return context.bredParams
 }
 

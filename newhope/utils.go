@@ -1,7 +1,6 @@
 package newhope
 
 import (
-	"errors"
 	"math/bits"
 )
 
@@ -37,7 +36,7 @@ func ModExp(x, e, p uint32) (result uint32) {
 
 // modexpMontgomery performes the modular exponentiation x^e mod p,
 // where x is in montgomery form, and returns x^2 in montgomery form.
-func modexpMontgomery(x, e, q, qInv uint32, bredParams []uint32) (result uint32) {
+func modexpMontgomery(x, e, q, qInv uint32, bredParams uint64) (result uint32) {
 
 	result = MForm(1, q, bredParams)
 
@@ -126,51 +125,6 @@ func IsPrime(num uint32) bool {
 		}
 	}
 	return true
-}
-
-// GenerateNTTPrimes generates "n" primes of bitlen "bitLen", stuited for NTT with "N",
-// starting from the integer "start" (which must be 1 mod 2N) and increasing (true) / decreasing (false) order
-func GenerateNTTPrimes(N, start, n, bitLen uint32, sign bool) ([]uint32, error) {
-	var x, v uint32
-
-	if uint32(bits.Len32(start)) != bitLen {
-		return nil, errors.New("error : start != bitLen")
-	}
-
-	v = N << 1
-	if start != 0 {
-		if start&((N<<1)-1) != 1 {
-			return nil, errors.New("error : start != 1 mod 2*N")
-		}
-		x = start
-	} else {
-		x = v<<(bitLen-uint32(bits.Len32(v))) + 1
-	}
-
-	primes := make([]uint32, n)
-
-	i := uint32(0)
-
-	for i < n {
-
-		// x gets out of the bitLen bound
-		if uint32(bits.Len32(x)) != bitLen {
-			return primes, nil
-		}
-
-		if IsPrime(x) {
-			primes[i] = x
-			i += 1
-		}
-
-		if sign {
-			x += v
-		} else {
-			x -= v
-		}
-	}
-
-	return primes, nil
 }
 
 //===========================
