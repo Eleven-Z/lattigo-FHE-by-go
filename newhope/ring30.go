@@ -162,7 +162,7 @@ func (context *Context) MulCoeffsMontgomeryAndSubNoMod(p1, p2, p3 *Poly) {
 func (context *Context) MulCoeffsConstant(p1, p2, p3 *Poly) {
 
 	for i := uint32(0); i < context.n; i++ {
-		p3.Coeffs[i] = bredConstant(p1.Coeffs[i], p2.Coeffs[i], context.q, context.bredparam)
+		p3.Coeffs[i] = bredconstant(p1.Coeffs[i], p2.Coeffs[i], context.q, context.bredparam)
 	}
 }
 

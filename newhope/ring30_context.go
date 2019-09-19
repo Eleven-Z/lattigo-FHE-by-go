@@ -41,13 +41,24 @@ type Context struct {
 }
 
 // NewContext generates a new empty context.
-func NewContext() *Context {
-	return new(Context)
+func NewContext(N uint32, Q uint32) (context *Context, err error) {
+	context = new(Context)
+
+	if err = context.setparameters(N, Q) ; err != nil {
+		return nil, err
+	}
+
+	if err = context.validateparameters() ; err != nil {
+		return context, err
+	}
+
+	return
 }
+
 
 // SetParameters initialize the parameters of an empty context with N and the provided moduli.
 // Only checks that N is a power of 2 and computes all the variable that aren't used for the NTT.
-func (context *Context) SetParameters(N uint32, Q uint32) error {
+func (context *Context) setparameters(N uint32, Q uint32) error {
 
 	// Checks if N is a power of 2
 	if (N&(N-1)) != 0 && N != 0 {
@@ -77,7 +88,7 @@ func (context *Context) SetParameters(N uint32, Q uint32) error {
 // ValidateParameters checks that N has beed correctly initialized, and checks that the modulus is a prime congruent to 1 mod 2N (i.e. allowing NTT).
 // Then it computes the variables required for the NTT. ValidateParameters purpose is to validate that the moduli allow the NTT and compute the
 // NTT parameters.
-func (context *Context) ValidateParameters() error {
+func (context *Context) validateparameters() error {
 
 	if context.validated {
 		return nil

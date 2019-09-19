@@ -5,9 +5,12 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+	"log"
 )
 
 func Benchmark_newhope(b *testing.B) {
+
+	var err error
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -18,9 +21,10 @@ func Benchmark_newhope(b *testing.B) {
 
 	//sigma := 3.19
 
-	context := NewContext()
-	context.SetParameters(N, Q)
-	context.ValidateParameters()
+	var context *Context
+	if context, err = NewContext(N, Q) ; err != nil {
+		log.Fatal(err)
+	}
 
 	benchmark_BRed(context, b)
 	benchmark_BRedAdd(context, b)

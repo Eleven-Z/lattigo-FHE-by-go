@@ -21,12 +21,8 @@ func Test_newhope(t *testing.T) {
 
 	//sigma := 3.19
 
-	context := NewContext()
-	if err = context.SetParameters(N, Q) ; err != nil {
-		log.Fatal(err)
-	}
-
-	if err = context.ValidateParameters() ; err != nil {
+	var context *Context
+	if context, err = NewContext(N, Q) ; err != nil {
 		log.Fatal(err)
 	}
 
