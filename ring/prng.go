@@ -6,7 +6,7 @@ import (
 	"math/bits"
 )
 
-// CRPGenerator is the structure storing the parameters for deterministicaly securely
+// CRPGenerator is the structure storing the parameters for deterministically and securely
 // generating random polynomials using the structure PRNG.
 type CRPGenerator struct {
 	prng    *utils.PRNG

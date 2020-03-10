@@ -5,6 +5,8 @@ import (
 	"github.com/ldsec/lattigo/ring"
 )
 
+//TODO: what's this? It's not in the paper
+
 // RKGProtocolNaive is a structure storing the parameters for the naive EKG protocol.
 type RKGProtocolNaive struct {
 	context  *dbfvContext

@@ -183,7 +183,7 @@ func (encryptor *pkEncryptor) encrypt(plaintext *Plaintext, ciphertext *Cipherte
 
 		// ct[0] = pk[0]*u + e0
 		encryptor.bfvContext.gaussianSampler.Sample(encryptor.polypool[2])
-		ringContext.Add(encryptor.polypool[0], encryptor.polypool[2], encryptor.polypool[0])
+		ringContext.Add(encryptor.polypool[0], encryptor.polypool[2], encryptor.polypool[0]) //TODO: isn't polypool[2] sampled from QP?
 
 		// ct[1] = pk[1]*u + e1
 		encryptor.bfvContext.gaussianSampler.Sample(encryptor.polypool[2])
@@ -219,7 +219,7 @@ func (encryptor *pkEncryptor) encrypt(plaintext *Plaintext, ciphertext *Cipherte
 
 	// ct[0] = pk[0]*u + e0 + m
 	// ct[1] = pk[1]*u + e1
-	ringContext.Add(ciphertext.value[0], plaintext.value, ciphertext.value[0])
+	ringContext.Add(ciphertext.value[0], plaintext.value, ciphertext.value[0]) //TODO: wait, we're adding pt (which is NTT^-1) to ct[0], which is not
 }
 
 func (encryptor *skEncryptor) EncryptNew(plaintext *Plaintext) *Ciphertext {

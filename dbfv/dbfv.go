@@ -55,7 +55,7 @@ func newDbfvContext(params *bfv.Parameters) *dbfvContext {
 
 	deltaMont := bfv.GenLiftParams(contextQ, params.T)
 
-	gaussianSampler := contextQP.NewKYSampler(params.Sigma, int(6*params.Sigma))
+	gaussianSampler := contextQP.NewKYSampler(params.Sigma, int(6*params.Sigma)) //TODO: why contextQP?
 
 	return &dbfvContext{
 		params:          params.Copy(),

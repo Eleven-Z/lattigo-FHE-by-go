@@ -122,19 +122,19 @@ func (rfp *RefreshProtocol) GenShares(sk *ring.Poly, ciphertext *bfv.Ciphertext,
 	contextQ.MulScalarBigint(share.RefreshShareDecrypt, contextP.ModulusBigint, share.RefreshShareDecrypt)
 
 	// h0 = s*ct[1]*P + e
-	sampler.Sample(rfp.tmp1)
+	sampler.Sample(rfp.tmp1) //TODO: should this be taken with smudging variance?
 	contextQ.Add(share.RefreshShareDecrypt, rfp.tmp1, share.RefreshShareDecrypt)
 
 	for x, i := 0, uint64(len(contextQ.Modulus)); i < uint64(len(rfp.context.contextQP.Modulus)); x, i = x+1, i+1 {
 		tmphP := rfp.hP.Coeffs[x]
 		tmp1 := rfp.tmp1.Coeffs[i]
 		for j := uint64(0); j < contextQ.N; j++ {
-			tmphP[j] += tmp1[j]
+			tmphP[j] += tmp1[j] //TODO: what?
 		}
 	}
 
 	// h0 = (s*ct[1]*P + e)/P
-	rfp.baseconverter.ModDownSplitedPQ(level, share.RefreshShareDecrypt, rfp.hP, share.RefreshShareDecrypt)
+	rfp.baseconverter.ModDownSplitedPQ(level, share.RefreshShareDecrypt, rfp.hP, share.RefreshShareDecrypt) //TODO: why rfp.hP, what is ModDown?
 
 	// h1 = -s*a
 	contextKeys.NTT(crs, rfp.tmp1)
@@ -184,7 +184,7 @@ func (rfp *RefreshProtocol) Recrypt(sharePlaintext *ring.Poly, crs *ring.Poly, s
 	// ciphertext[0] = (-crs*s + e')/P + m
 	rfp.context.contextQ.Add(sharePlaintext, shareRecrypt, ciphertextOut.Value()[0])
 
-	// ciphertext[1] = crs/P
+	// ciphertext[1] = crs/P	//TODO: why?
 	rfp.baseconverter.ModDownPQ(uint64(len(ciphertextOut.Value()[1].Coeffs)-1), crs, ciphertextOut.Value()[1])
 
 }

@@ -67,7 +67,7 @@ func newBFVContext(params *Parameters) (context *bfvContext) {
 		panic(err)
 	}
 
-	context.gaussianSampler = context.contextQP.NewKYSampler(params.Sigma, int(6*params.Sigma))
+	context.gaussianSampler = context.contextQP.NewKYSampler(params.Sigma, int(6*params.Sigma)) //TODO: why contextQP?
 
 	context.galElRotColLeft = ring.GenGaloisParams(context.n, GaloisGen)
 	context.galElRotColRight = ring.GenGaloisParams(context.n, ring.ModExp(GaloisGen, 2*context.n-1, 2*context.n))

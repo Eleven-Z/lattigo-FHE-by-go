@@ -70,7 +70,7 @@ func (context *Context) SampleGaussianNew(sigma float64, bound uint64) (pol *Pol
 	return
 }
 
-// SampleGaussianNTT samples a trucated gaussian polynomial in the NTT domain with variance sigma within the given bound using the Ziggurat algorithm.
+// SampleGaussianNTT samples a truncated gaussian polynomial in the NTT domain with variance sigma within the given bound using the Ziggurat algorithm.
 func (context *Context) SampleGaussianNTT(pol *Poly, sigma float64, bound uint64) {
 	context.SampleGaussian(pol, sigma, bound)
 	context.NTT(pol, pol)
@@ -91,7 +91,7 @@ type KYSampler struct {
 	Matrix  [][]uint8
 }
 
-// NewKYSampler creates a new KYSampler with sigma and bound that will be used to sample polynomial within the provided discret gaussian distribution.
+// NewKYSampler creates a new KYSampler with sigma and bound that will be used to sample polynomial within the provided discrete gaussian distribution.
 func (context *Context) NewKYSampler(sigma float64, bound int) *KYSampler {
 	kysampler := new(KYSampler)
 	kysampler.context = context
@@ -101,14 +101,14 @@ func (context *Context) NewKYSampler(sigma float64, bound int) *KYSampler {
 	return kysampler
 }
 
-//gaussian computes (1/variange*sqrt(pi)) * exp((x^2) / (2*variance^2)),  2.50662827463100050241576528481104525300698674060993831662992357 = sqrt(2*pi)
+//gaussian computes (1/variance*sqrt(pi)) * exp((x^2) / (2*variance^2)),  2.50662827463100050241576528481104525300698674060993831662992357 = sqrt(2*pi)
 func gaussian(x, sigma float64) float64 {
 	return (1 / (sigma * 2.5066282746310007)) * math.Exp(-((math.Pow(x, 2)) / (2 * sigma * sigma)))
 }
 
-// computeMatrix computes the binary expension with precision x in bits of the normal distribution
+// computeMatrix computes the binary expansion with precision x in bits of the normal distribution
 // with sigma and bound. Returns a matrix of the form M = [[0,1,0,0,...],[0,0,1,,0,...]],
-// where each row is the binary expension of the normal distribution of index(row) with sigma and bound (center=0).
+// where each row is the binary expansion of the normal distribution of index(row) with sigma and bound (center=0).
 func computeMatrix(sigma float64, bound int) [][]uint8 {
 	var g float64
 	var x uint64

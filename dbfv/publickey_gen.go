@@ -36,7 +36,7 @@ func NewCKGProtocol(params *bfv.Parameters) *CKGProtocol {
 
 	context := newDbfvContext(params)
 	ckg := new(CKGProtocol)
-	ckg.context = context.contextQP
+	ckg.context = context.contextQP //TODO: why contextQP?
 	ckg.gaussianSampler = context.gaussianSampler
 	return ckg
 }
@@ -48,12 +48,12 @@ func (ckg *CKGProtocol) AllocateShares() CKGShare {
 
 // GenShare generates the party's public key share from its secret key as:
 //
-// crs*s_i + e_i
+// -crs*s_i + e_i
 //
 // for the receiver protocol. Has no effect is the share was already generated.
 func (ckg *CKGProtocol) GenShare(sk *ring.Poly, crs *ring.Poly, shareOut CKGShare) {
 	ckg.gaussianSampler.SampleNTT(shareOut.Poly)
-	ckg.context.MulCoeffsMontgomeryAndSub(sk, crs, shareOut.Poly)
+	ckg.context.MulCoeffsMontgomeryAndSub(sk, crs, shareOut.Poly) //TODO: does this assume that either sk or crs are in Montgomery form?
 }
 
 // AggregateShares aggregates a new share to the aggregate key

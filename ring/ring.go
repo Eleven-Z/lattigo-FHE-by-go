@@ -306,7 +306,7 @@ func (context *Context) MulCoeffsMontgomeryConstantAndAddNoModLvl(level uint64, 
 	}
 }
 
-// MulCoeffsMontgomeryAndSub multiplies p1 by p2 coefficient wise with a Montgomery modular reduction, subtractsing the result to p3 with modular reduction.
+// MulCoeffsMontgomeryAndSub multiplies p1 by p2 coefficient wise with a Montgomery modular reduction, subtracting the result to p3 with modular reduction.
 // Expects p1 and/or p2 to be in Montgomery form for correctness (see MRed).
 func (context *Context) MulCoeffsMontgomeryAndSub(p1, p2, p3 *Poly) {
 	for i, qi := range context.Modulus {
@@ -367,7 +367,7 @@ func (context *Context) MulPoly(p1, p2, p3 *Poly) {
 }
 
 // MulPolyMontgomery multiplies p1 by p2 and returns the result on p3.
-// Expect wither p1 or p2 to be in Montgomery form for correctness.
+// Expects either p1 or p2 to be in Montgomery form for correctness.
 func (context *Context) MulPolyMontgomery(p1, p2, p3 *Poly) {
 
 	a := context.NewPoly()
@@ -463,46 +463,46 @@ func (context *Context) Exp(p1 *Poly, e uint64, p2 *Poly) {
 	context.InvNTT(p1, p2)
 }
 
-// AddScalar adds to each coefficient of p1 a scalar and applies a modular reduction, returing the result on p2.
+// AddScalar adds to each coefficient of p1 a scalar and applies a modular reduction, returning the result on p2.
 func (context *Context) AddScalar(p1 *Poly, scalar uint64, p2 *Poly) {
 	for i, Qi := range context.Modulus {
-		p1tmp, p2tmp := p1.Coeffs[i], p1.Coeffs[i]
+		p1tmp, p2tmp := p1.Coeffs[i], p2.Coeffs[i]
 		for j := uint64(0); j < context.N; j++ {
 			p2tmp[j] = CRed(p1tmp[j]+scalar, Qi)
 		}
 	}
 }
 
-// AddScalarBigint adds to each coefficient of p1 a big.Int scalar and applies a modular reduction, returing the result on p2.
+// AddScalarBigint adds to each coefficient of p1 a big.Int scalar and applies a modular reduction, returning the result on p2.
 func (context *Context) AddScalarBigint(p1 *Poly, scalar *big.Int, p2 *Poly) {
 	tmp := new(big.Int)
 	var scalarQi uint64
 	for i, Qi := range context.Modulus {
 		scalarQi = tmp.Mod(scalar, NewUint(Qi)).Uint64()
-		p1tmp, p2tmp := p1.Coeffs[i], p1.Coeffs[i]
+		p1tmp, p2tmp := p1.Coeffs[i], p2.Coeffs[i]
 		for j := uint64(0); j < context.N; j++ {
 			p2tmp[j] = CRed(p1tmp[j]+scalarQi, Qi)
 		}
 	}
 }
 
-// SubScalar subtractss to each coefficient of p1 a scalar and applies a modular reduction, returing the result on p2.
+// SubScalar subtracts to each coefficient of p1 a scalar and applies a modular reduction, returning the result on p2.
 func (context *Context) SubScalar(p1 *Poly, scalar uint64, p2 *Poly) {
 	for i, Qi := range context.Modulus {
-		p1tmp, p2tmp := p1.Coeffs[i], p1.Coeffs[i]
+		p1tmp, p2tmp := p1.Coeffs[i], p2.Coeffs[i]
 		for j := uint64(0); j < context.N; j++ {
 			p2tmp[j] = CRed(p1tmp[j]+(Qi-scalar), Qi)
 		}
 	}
 }
 
-// SubScalarBigint subtractss to each coefficient of p1 a big.Int scalar and applies a modular reduction, returing the result on p2.
+// SubScalarBigint subtracts to each coefficient of p1 a big.Int scalar and applies a modular reduction, returning the result on p2.
 func (context *Context) SubScalarBigint(p1 *Poly, scalar *big.Int, p2 *Poly) {
 	tmp := new(big.Int)
 	var scalarQi uint64
 	for i, Qi := range context.Modulus {
 		scalarQi = tmp.Mod(scalar, NewUint(Qi)).Uint64()
-		p1tmp, p2tmp := p1.Coeffs[i], p1.Coeffs[i]
+		p1tmp, p2tmp := p1.Coeffs[i], p2.Coeffs[i]
 		for j := uint64(0); j < context.N; j++ {
 			p2tmp[j] = CRed(p1tmp[j]+(Qi-scalarQi), Qi)
 		}
@@ -536,7 +536,7 @@ func (context *Context) MulScalarLvl(level uint64, p1 *Poly, scalar uint64, p2 *
 	}
 }
 
-// MulScalarBigint multiplies each coefficientsof p1 by a big.Int scalar and applies a modular reduction, returning the result on p2.
+// MulScalarBigint multiplies each coefficient of p1 by a big.Int scalar and applies a modular reduction, returning the result on p2.
 // To be used when the scalar is bigger than 64 bits.
 func (context *Context) MulScalarBigint(p1 *Poly, scalar *big.Int, p2 *Poly) {
 	scalarQi := new(big.Int)
@@ -552,7 +552,7 @@ func (context *Context) MulScalarBigint(p1 *Poly, scalar *big.Int, p2 *Poly) {
 	}
 }
 
-// MulScalarBigintLvl multiplies each coefficientsof p1 by a big.Int scalar and applies a modular reduction, returning the result on p2.
+// MulScalarBigintLvl multiplies each coefficient of p1 by a big.Int scalar and applies a modular reduction, returning the result on p2.
 // To be used when the scalar is bigger than 64 bits.
 func (context *Context) MulScalarBigintLvl(level uint64, p1 *Poly, scalar *big.Int, p2 *Poly) {
 
@@ -571,7 +571,7 @@ func (context *Context) MulScalarBigintLvl(level uint64, p1 *Poly, scalar *big.I
 	}
 }
 
-// Shift circulary shifts the coefficients of the polynomial p1 by n to the left and returns the result on the receiver polynomial.
+// Shift circularly shifts the coefficients of the polynomial p1 by n to the left and returns the result on the receiver polynomial.
 func (context *Context) Shift(p1 *Poly, n uint64, p2 *Poly) {
 	mask := uint64((1 << context.N) - 1)
 	for i := range context.Modulus {
@@ -579,7 +579,7 @@ func (context *Context) Shift(p1 *Poly, n uint64, p2 *Poly) {
 	}
 }
 
-// MForm setss p1 in conventional form to its Montgomeryform, returning the result on p2.
+// MForm sets p1 in conventional form to its Montgomery form, returning the result on p2.
 func (context *Context) MForm(p1, p2 *Poly) {
 
 	for i, qi := range context.Modulus {
@@ -591,7 +591,7 @@ func (context *Context) MForm(p1, p2 *Poly) {
 	}
 }
 
-// MFormLvl setss p1 in conventional form to its Montgomeryform, returning the result on p2.
+// MFormLvl sets p1 in conventional form to its Montgomery form, returning the result on p2.
 func (context *Context) MFormLvl(level uint64, p1, p2 *Poly) {
 
 	var qi uint64
@@ -606,7 +606,7 @@ func (context *Context) MFormLvl(level uint64, p1, p2 *Poly) {
 	}
 }
 
-// InvMForm setss p1 in Montgomeryform to its conventional form, returning the result on p2.
+// InvMForm sets p1 in Montgomery form to its conventional form, returning the result on p2.
 func (context *Context) InvMForm(p1, p2 *Poly) {
 
 	for i, qi := range context.Modulus {
@@ -745,7 +745,7 @@ func (context *Context) MulByVectorMontgomeryAndAddNoMod(p1 *Poly, vector []uint
 }
 
 // BitReverse applies a bit reverse permutation on the coefficients of the input polynomial and returns the result on the receiver polynomial.
-// Can safely be used for inplace permutation.
+// Can safely be used for in-place permutation.
 func (context *Context) BitReverse(p1, p2 *Poly) {
 	bitLenOfN := uint64(bits.Len64(context.N) - 1)
 
@@ -769,9 +769,9 @@ func (context *Context) BitReverse(p1, p2 *Poly) {
 	}
 }
 
-// Rotate applies a Galoi Automorphism on p1 in NTT form,
+// Rotate applies a Galois Automorphism on p1 in NTT form,
 // rotating the coefficients to the right by n, returning the result on p2.
-// Requires the data to permuted in bitreversal order before applying NTT.
+// Requires the data to permuted in bit-reversed order before applying NTT.
 func (context *Context) Rotate(p1 *Poly, n uint64, p2 *Poly) {
 
 	var root, gal uint64
@@ -788,7 +788,7 @@ func (context *Context) Rotate(p1 *Poly, n uint64, p2 *Poly) {
 
 		gal = MForm(1, qi, context.bredParams[i])
 
-		p1tmp, p2tmp := p1.Coeffs[i], p1.Coeffs[i]
+		p1tmp, p2tmp := p1.Coeffs[i], p2.Coeffs[i]
 
 		for j := uint64(1); j < context.N; j++ {
 

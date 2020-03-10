@@ -90,7 +90,7 @@ var DefaultParams = []*Parameters{
 // Moduli stores the NTT primes of the RNS representation.
 type Moduli struct {
 	Qi    []uint64 // Ciphertext prime moduli
-	Pi    []uint64 // Keys additional prime moduli
+	Pi    []uint64 // Keys additional prime moduli	//TODO: when are they used?
 	QiMul []uint64 // Ciphertext secondary prime moduli
 }
 

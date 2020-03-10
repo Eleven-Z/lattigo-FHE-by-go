@@ -19,6 +19,6 @@ func NewPlaintext(params *Parameters) *Plaintext {
 
 	plaintext := &Plaintext{newBfvElement(params, 0), nil}
 	plaintext.value = plaintext.bfvElement.value[0]
-	plaintext.isNTT = false
+	plaintext.isNTT = false //TODO: what?
 	return plaintext
 }

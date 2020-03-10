@@ -72,7 +72,7 @@ func (share *PCKSShare) UnmarshalBinary(data []byte) error {
 }
 
 // NewPCKSProtocol creates a new PCKSProtocol object and will be used to re-encrypt a ciphertext ctx encrypted under a secret-shared key among j parties under a new
-// collective public-key.
+// collective public key.
 func NewPCKSProtocol(params *bfv.Parameters, sigmaSmudging float64) *PCKSProtocol {
 
 	if !params.IsValid() {
@@ -84,7 +84,7 @@ func NewPCKSProtocol(params *bfv.Parameters, sigmaSmudging float64) *PCKSProtoco
 	pcks := new(PCKSProtocol)
 
 	pcks.context = context
-
+	//TODO: again, why QP?
 	pcks.gaussianSamplerSmudge = context.contextQP.NewKYSampler(sigmaSmudging, int(6*sigmaSmudging))
 
 	pcks.tmp = context.contextQP.NewPoly()
@@ -105,18 +105,18 @@ func (pcks *PCKSProtocol) AllocateShares() (s PCKSShare) {
 
 // GenShare is the first part of the unique round of the PCKSProtocol protocol. Each party computes the following :
 //
-// [s_i * ctx[0] + (u_i * pk[0] + e_0i)/P, (u_i * pk[1] + e_1i)/P]
+// [s_i * ctx[1] + (u_i * pk[0] + e_0i)/P, (u_i * pk[1] + e_1i)/P]	//TODO: what's this /P?
 //
 // and broadcasts the result to the other j-1 parties.
 func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Ciphertext, shareOut PCKSShare) {
 
 	contextQ := pcks.context.contextQ
-	contextKeys := pcks.context.contextQP
+	contextKeys := pcks.context.contextQP //TODO: why?
 
-	contextKeys.SampleTernaryMontgomeryNTT(pcks.tmp, 0.5)
+	contextKeys.SampleTernaryMontgomeryNTT(pcks.tmp, 0.5) //TODO: do Montgomery and NTT commute?
 
 	// h_0 = u_i * pk_0
-	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[0], pcks.share0tmp)
+	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[0], pcks.share0tmp) //TODO: is pk in normal form (otherwise share0tmp is in Montgomery form)?
 	// h_1 = u_i * pk_1
 	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[1], pcks.share1tmp)
 
@@ -131,14 +131,14 @@ func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Cip
 	// h_0 = (u_i * pk_0 + e0)/P
 	pcks.baseconverter.ModDownPQ(uint64(len(contextQ.Modulus))-1, pcks.share0tmp, shareOut[0])
 
-	// h_0 = (u_i * pk_0 + e0)/P
+	// h_1 = (u_i * pk_1 + e1)/P
 	// Could be moved to the keyswitch phase, but the second element of the shares will be larger
 	pcks.baseconverter.ModDownPQ(uint64(len(contextQ.Modulus))-1, pcks.share1tmp, shareOut[1])
 
 	// tmp = s_i*c_1
 	contextQ.NTT(ct.Value()[1], pcks.tmp)
 	contextQ.MulCoeffsMontgomery(pcks.tmp, sk, pcks.tmp)
-	contextQ.InvNTT(pcks.tmp, pcks.tmp)
+	contextQ.InvNTT(pcks.tmp, pcks.tmp) //TODO: is only sk in Montgomery form (or ct[0] and ct[1] as well)?
 
 	// h_0 = s_i*c_1 + (u_i * pk_0 + e0)/P
 	contextQ.Add(shareOut[0], pcks.tmp, shareOut[0])
@@ -147,7 +147,7 @@ func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Cip
 
 }
 
-// AggregateShares is the second part of the first and unique round of the PCKSProtocol protocol. Each party uppon receiving the j-1 elements from the
+// AggregateShares is the second part of the first and unique round of the PCKSProtocol protocol. Each party upon receiving the j-1 elements from the
 // other parties computes :
 //
 // [ctx[0] + sum(s_i * ctx[0] + u_i * pk[0] + e_0i), sum(u_i * pk[1] + e_1i)]

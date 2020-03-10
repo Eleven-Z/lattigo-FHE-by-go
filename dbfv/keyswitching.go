@@ -24,7 +24,7 @@ type CKSShare struct {
 	*ring.Poly
 }
 
-// UnmarshalBinary decodes a previouls marshaled share on the target share.
+// UnmarshalBinary decodes a previously marshaled share on the target share.
 func (share *CKSShare) UnmarshalBinary(data []byte) error {
 	share.Poly = new(ring.Poly)
 	err := share.Poly.UnmarshalBinary(data)
@@ -32,8 +32,8 @@ func (share *CKSShare) UnmarshalBinary(data []byte) error {
 
 }
 
-// NewCKSProtocol creates a new CKSProtocol that will be used to operate a collective key-switching on a ciphertext encrypted under a collective public-key, whose
-// secret-shares are distributed among j parties, re-encrypting the ciphertext under another public-key, whose secret-shares are also known to the
+// NewCKSProtocol creates a new CKSProtocol that will be used to operate a collective key-switching on a ciphertext encrypted under a collective public key, whose
+// secret-shares are distributed among j parties, re-encrypting the ciphertext under another public key, whose secret-shares are also known to the
 // parties.
 func NewCKSProtocol(params *bfv.Parameters, sigmaSmudging float64) *CKSProtocol {
 
@@ -65,10 +65,10 @@ func (cks *CKSProtocol) AllocateShare() CKSShare {
 
 }
 
-// GenShare is the first and unique round of the CKSProtocol protocol. Each party holding a ciphertext ctx encrypted under a collective publick-key musth
+// GenShare is the first and unique round of the CKSProtocol protocol. Each party holding a ciphertext ctx encrypted under a collective public key must
 // compute the following :
 //
-// [(skInput_i - skOutput_i) * ctx[0] + e_i]
+// [(skInput_i - skOutput_i) * ctx[1] + e_i]
 //
 // Each party then broadcast the result of this computation to the other j-1 parties.
 func (cks *CKSProtocol) GenShare(skInput, skOutput *ring.Poly, ct *bfv.Ciphertext, shareOut CKSShare) {
@@ -86,13 +86,13 @@ func (cks *CKSProtocol) genShareDelta(skDelta *ring.Poly, ct *bfv.Ciphertext, sh
 	contextP := cks.context.contextP
 
 	contextQ.NTT(ct.Value()[1], cks.tmpNtt)
-	contextQ.MulCoeffsMontgomery(cks.tmpNtt, skDelta, shareOut.Poly)
+	contextQ.MulCoeffsMontgomery(cks.tmpNtt, skDelta, shareOut.Poly) //TODO: lemme guess, is skDelta (and thus skIn and skOut) in NTT-then-Montgomery form?
 	contextQ.MulScalarBigint(shareOut.Poly, contextP.ModulusBigint, shareOut.Poly)
 
 	contextQ.InvNTT(shareOut.Poly, shareOut.Poly)
 
 	cks.gaussianSamplerSmudge.Sample(cks.tmpNtt)
-	contextQ.Add(shareOut.Poly, cks.tmpNtt, shareOut.Poly)
+	contextQ.Add(shareOut.Poly, cks.tmpNtt, shareOut.Poly) //TODO: why don't we stop here?
 
 	for x, i := 0, uint64(len(contextQ.Modulus)); i < uint64(len(cks.context.contextQP.Modulus)); x, i = x+1, i+1 {
 		tmphP := cks.hP.Coeffs[x]

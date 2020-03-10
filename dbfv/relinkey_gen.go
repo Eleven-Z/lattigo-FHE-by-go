@@ -169,7 +169,7 @@ func (share *RKGShareRoundThree) UnmarshalBinary(data []byte) error {
 
 // AllocateShares allocates the shares of the EKG protocol.
 func (ekg *RKGProtocol) AllocateShares() (r1 RKGShareRoundOne, r2 RKGShareRoundTwo, r3 RKGShareRoundThree) {
-	r1 = make([]*ring.Poly, ekg.context.params.Beta())
+	r1 = make([]*ring.Poly, ekg.context.params.Beta()) //TODO: what? why?
 	r2 = make([][2]*ring.Poly, ekg.context.params.Beta())
 	r3 = make([]*ring.Poly, ekg.context.params.Beta())
 	for i := uint64(0); i < ekg.context.params.Beta(); i++ {
@@ -182,7 +182,7 @@ func (ekg *RKGProtocol) AllocateShares() (r1 RKGShareRoundOne, r2 RKGShareRoundT
 	return
 }
 
-// NewEkgProtocol creates a new RKGProtocol object that will be used to generate a collective evaluation-key
+// NewEkgProtocol creates a new RKGProtocol object that will be used to generate a collective evaluation key
 // among j parties in the given context with the given bit-decomposition.
 func NewEkgProtocol(params *bfv.Parameters) *RKGProtocol {
 
