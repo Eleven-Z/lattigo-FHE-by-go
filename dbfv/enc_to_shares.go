@@ -9,6 +9,7 @@
 package dbfv
 
 import (
+	"errors"
 	"github.com/ldsec/lattigo/bfv"
 	"github.com/ldsec/lattigo/ring"
 )
@@ -30,9 +31,9 @@ type E2SDecryptionShare struct {
 	CKSShare
 }
 
-//E2SAdditiveShare represents the additive share of the plaintext the party possesses after running the protocol.
+//AdditiveShare represents the additive share of the plaintext the party possesses after running the protocol.
 //The additive shares are elements of Z_t^n, and add up to the original clear vector, not to its plaintext-encoding.
-type E2SAdditiveShare struct {
+type AdditiveShare struct {
 	coeffs []uint64
 }
 
@@ -48,14 +49,14 @@ func NewE2SProtocol(params *bfv.Parameters, sigmaSmudging float64) *E2SProtocol 
 }
 
 //AllocateShares allocates both shares: they are both needed by both leaves and slaves
-func (e2s *E2SProtocol) AllocateShares() (E2SDecryptionShare, E2SAdditiveShare) {
+func (e2s *E2SProtocol) AllocateShares() (E2SDecryptionShare, AdditiveShare) {
 	return E2SDecryptionShare{e2s.cks.AllocateShare()},
-		E2SAdditiveShare{make([]uint64, e2s.cks.context.n)}
+		AdditiveShare{make([]uint64, e2s.cks.context.n)}
 }
 
 //GenSharesLeaf is to be called by leaves to generate both the decryption share and the additive share
-func (e2s *E2SProtocol) GenSharesLeaf(sk bfv.SecretKey, ct *bfv.Ciphertext, decShareOut E2SDecryptionShare, addShareOut E2SAdditiveShare) {
-	//First step is to run the CKS protocol with s' = 0
+func (e2s *E2SProtocol) GenSharesLeaf(sk bfv.SecretKey, ct *bfv.Ciphertext, decShareOut E2SDecryptionShare, addShareOut AdditiveShare) {
+	//First step is to run the CKS protocol with s_out = 0
 	e2s.cks.GenShare(sk.Get(), e2s.cks.context.contextQ.NewPoly(), ct, decShareOut.CKSShare)
 
 	//We sample M_i, which will be returned as-is in addShareOut
@@ -64,7 +65,7 @@ func (e2s *E2SProtocol) GenSharesLeaf(sk bfv.SecretKey, ct *bfv.Ciphertext, decS
 	//We encode M_i, so as to get delta*M_i in the InvNTT domain (where the ciphertext lies)
 	e2s.encoder.EncodeUint(addShareOut.coeffs, e2s.plain) //TODO: is this right?
 
-	//We subtract delta*M_i to the current decryption share, to get the final decryption share
+	//We subtract delta*M_i to the decryption share
 	e2s.cks.context.contextQ.Sub(decShareOut.Poly, e2s.plain.Value()[0], decShareOut.Poly)
 
 	return
@@ -72,7 +73,7 @@ func (e2s *E2SProtocol) GenSharesLeaf(sk bfv.SecretKey, ct *bfv.Ciphertext, decS
 
 //GenShareMaster is to be called by the master after aggregating all the slaves' decryption shares
 //to get its own additive share
-func (e2s *E2SProtocol) GenShareMaster(sk *bfv.SecretKey, ct *bfv.Ciphertext, decShareAgg E2SDecryptionShare, addShareOut E2SAdditiveShare) {
+func (e2s *E2SProtocol) GenShareMaster(sk *bfv.SecretKey, ct *bfv.Ciphertext, decShareAgg E2SDecryptionShare, addShareOut AdditiveShare) {
 	//First, we prepare the ciphertext to decrypt
 	e2s.cks.context.contextQ.Copy(ct.Value()[0], e2s.poly)
 	e2s.cks.context.contextQ.Add(e2s.poly, decShareAgg.Poly, e2s.poly) //ct[0] += sum(h_i)
@@ -95,17 +96,51 @@ func (e2s *E2SProtocol) AggregateDecryptionShares(share1, share2, shareOut E2SDe
 
 /******** Operations on additive shares********/
 
+//NewAdditiveShare pretty much describes itself.
+func NewAdditiveShare(coeffs []uint64) AdditiveShare {
+	return AdditiveShare{coeffs: coeffs}
+}
+
+//GetCoeffs returns a copy of the coefficients.
+func (x AdditiveShare) GetCoeffs() []uint64 {
+	newCoeffs := make([]uint64, len(x.coeffs))
+	copy(newCoeffs, x.coeffs)
+	return newCoeffs
+}
+
+//GetNbCoeffs returns the number of coefficients.
+func (x AdditiveShare) GetNbCoeffs() uint64 {
+	return uint64(len(x.coeffs))
+}
+
+//SetCoeffs copies the coefficients (requires x.coeffs and coeffs to have the same length)
+func (x AdditiveShare) SetCoeffs(coeffs []uint64) error {
+	if len(x.coeffs) != len(coeffs) {
+		return errors.New("Cannot add two additive shares of different length")
+	}
+
+	for i := range x.coeffs {
+		x.coeffs[i] = coeffs[i]
+	}
+
+	return nil
+}
+
 //Add requires x.coeffs and y.coeffs to have the same length
-func (x E2SAdditiveShare) Add(y E2SAdditiveShare) {
+func (x AdditiveShare) Add(y AdditiveShare) error {
+	if len(x.coeffs) != len(y.coeffs) {
+		return errors.New("Cannot add two additive shares of different length")
+	}
+
 	for i := range x.coeffs {
 		x.coeffs[i] += y.coeffs[i]
 	}
 
-	return
+	return nil
 }
 
-//Equals requires x.coeffs and y.coeffs to have the same length
-func (x E2SAdditiveShare) Equals(y E2SAdditiveShare) bool {
+//Equals compares the shares coefficient-wise
+func (x AdditiveShare) Equals(y AdditiveShare) bool {
 	if len(x.coeffs) != len(y.coeffs) {
 		return false
 	}
@@ -117,9 +152,4 @@ func (x E2SAdditiveShare) Equals(y E2SAdditiveShare) bool {
 	}
 
 	return true
-}
-
-//NewE2SAdditiveShare pretty much describes itself
-func NewE2SAdditiveShare(coeffs []uint64) E2SAdditiveShare {
-	return E2SAdditiveShare{coeffs: coeffs}
 }
