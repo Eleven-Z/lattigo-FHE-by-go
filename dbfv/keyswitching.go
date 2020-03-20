@@ -86,13 +86,13 @@ func (cks *CKSProtocol) genShareDelta(skDelta *ring.Poly, ct *bfv.Ciphertext, sh
 	contextP := cks.context.contextP
 
 	contextQ.NTT(ct.Value()[1], cks.tmpNtt)
-	contextQ.MulCoeffsMontgomery(cks.tmpNtt, skDelta, shareOut.Poly) //TODO: lemme guess, is skDelta (and thus skIn and skOut) in NTT-then-Montgomery form?
+	contextQ.MulCoeffsMontgomery(cks.tmpNtt, skDelta, shareOut.Poly)
 	contextQ.MulScalarBigint(shareOut.Poly, contextP.ModulusBigint, shareOut.Poly)
 
 	contextQ.InvNTT(shareOut.Poly, shareOut.Poly)
 
 	cks.gaussianSamplerSmudge.Sample(cks.tmpNtt)
-	contextQ.Add(shareOut.Poly, cks.tmpNtt, shareOut.Poly) //TODO: why don't we stop here?
+	contextQ.Add(shareOut.Poly, cks.tmpNtt, shareOut.Poly)
 
 	for x, i := 0, uint64(len(contextQ.Modulus)); i < uint64(len(cks.context.contextQP.Modulus)); x, i = x+1, i+1 {
 		tmphP := cks.hP.Coeffs[x]

@@ -54,7 +54,7 @@ var err error
 var testParams = new(dbfvTestParameters)
 
 func init() {
-	testParams.parties = 3
+	testParams.parties = 2
 
 	testParams.contexts = bfv.DefaultParams
 }
@@ -68,7 +68,7 @@ func Test_DBFV(t *testing.T) {
 	t.Run("RotKeyGenRotRows", testRotKeyGenRotRows)
 	t.Run("RotKeyGenRotCols", testRotKeyGenRotCols)
 	t.Run("Refresh", testRefresh)
-
+	t.Run("EncryptionToShares", testEncToShares)
 }
 
 func genDBFVTestContext(params *bfv.Parameters) (testCtx *dbfvTestContext) {
@@ -674,6 +674,62 @@ func testRefresh(t *testing.T) {
 			//Decrypts and compare
 			if utils.EqualSliceUint64(coeffs, encoder.DecodeUint(decryptorSk0.DecryptNew(ciphertext))) != true {
 				t.Errorf("error : BOOT")
+			}
+		})
+	}
+}
+
+func testEncToShares(t *testing.T) {
+	nbParties := testParams.parties
+
+	for _, parameters := range testParams.contexts {
+		testCtx := genDBFVTestContext(parameters)
+
+		sk0Shards := testCtx.sk0Shards
+		sigmaSmudging := parameters.Sigma //TODO: how to set this?
+
+		msg := testCtx.contextT.NewUniformPoly().GetCoefficients()[0]
+		plain := bfv.NewPlaintext(parameters)
+		testCtx.encoder.EncodeUint(msg, plain)
+		cipher := bfv.NewCiphertext(parameters, 1)
+		testCtx.encryptorPk0.Encrypt(plain, cipher)
+
+		t.Run(testString("", nbParties, parameters), func(t *testing.T) {
+			type Party struct {
+				proto    *E2SProtocol
+				sk       *bfv.SecretKey
+				decShare E2SDecryptionShare
+				addShare AdditiveShare
+			}
+
+			// Create parties
+			parties := make([]*Party, nbParties)
+			for i := uint64(0); i < nbParties; i++ {
+				p := new(Party)
+				p.proto = NewE2SProtocol(parameters, sigmaSmudging)
+				p.sk = sk0Shards[i]
+				p.decShare, p.addShare = p.proto.AllocateShares()
+				parties[i] = p
+			}
+			P0 := parties[0]
+			shareSum := P0.proto.AllocateAddShare()
+
+			// Each slave runs the E2S protocol, and contribute to the sum of the additive shares
+			for i := uint64(1); i < nbParties; i++ {
+				p := parties[i]
+				p.proto.GenSharesSlave(p.sk, cipher, p.decShare, p.addShare)
+				P0.proto.AggregateDecryptionShares(P0.decShare, p.decShare, P0.decShare)
+
+				P0.proto.SumAdditiveShares(shareSum, p.addShare, shareSum)
+			}
+
+			// The master runs the protocol, and contributes to the sum of the additive shares
+			P0.proto.GenShareMaster(P0.sk, cipher, P0.decShare, P0.addShare)
+			P0.proto.SumAdditiveShares(shareSum, P0.addShare, shareSum)
+
+			// Verifies that msg = shareSum
+			if !shareSum.Equal(msg) {
+				t.Fail()
 			}
 		})
 	}

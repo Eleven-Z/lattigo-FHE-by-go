@@ -44,11 +44,11 @@ func (s2e *S2EProtocol) AllocateShare() S2EReencryptionShare {
 }
 
 //GenShare generates the re-encryption share, given the output secret key, the additive share, and the crs.
-func (s2e *S2EProtocol) GenShare(sk bfv.SecretKey, crs *ring.Poly, addShare AdditiveShare, shareOut S2EReencryptionShare) {
+func (s2e *S2EProtocol) GenShare(sk *bfv.SecretKey, crs *ring.Poly, addShare AdditiveShare, shareOut S2EReencryptionShare) {
 	//First step is to run the CKS protocol, on a crafted ciphertext, with s_in = 0.
 	//First, craft the ciphertext.
-	s2e.encoder.EncodeUint(addShare.coeffs, s2e.plain)           //Store delta*M_i, which will be ct[0]
-	s2e.cipher.SetValue([]*ring.Poly{s2e.plain.Value()[0], crs}) //Build the ciphertext
+	s2e.encoder.EncodeUint(addShare.elem.GetCoefficients()[0], s2e.plain) //Store delta*M_i, which will be ct[0]
+	s2e.cipher.SetValue([]*ring.Poly{s2e.plain.Value()[0], crs})          //Build the ciphertext
 	//Then, run the CKS protocol
 	s2e.cks.GenShare(s2e.cks.context.contextQ.NewPoly(), sk.Get(), s2e.cipher, shareOut.CKSShare)
 

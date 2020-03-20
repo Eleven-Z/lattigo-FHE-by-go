@@ -84,7 +84,6 @@ func NewPCKSProtocol(params *bfv.Parameters, sigmaSmudging float64) *PCKSProtoco
 	pcks := new(PCKSProtocol)
 
 	pcks.context = context
-	//TODO: again, why QP?
 	pcks.gaussianSamplerSmudge = context.contextQP.NewKYSampler(sigmaSmudging, int(6*sigmaSmudging))
 
 	pcks.tmp = context.contextQP.NewPoly()
@@ -111,12 +110,12 @@ func (pcks *PCKSProtocol) AllocateShares() (s PCKSShare) {
 func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Ciphertext, shareOut PCKSShare) {
 
 	contextQ := pcks.context.contextQ
-	contextKeys := pcks.context.contextQP //TODO: why?
+	contextKeys := pcks.context.contextQP
 
 	contextKeys.SampleTernaryMontgomeryNTT(pcks.tmp, 0.5) //TODO: do Montgomery and NTT commute?
 
 	// h_0 = u_i * pk_0
-	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[0], pcks.share0tmp) //TODO: is pk in normal form (otherwise share0tmp is in Montgomery form)?
+	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[0], pcks.share0tmp)
 	// h_1 = u_i * pk_1
 	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[1], pcks.share1tmp)
 
