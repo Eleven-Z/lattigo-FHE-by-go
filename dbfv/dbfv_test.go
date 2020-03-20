@@ -54,7 +54,7 @@ var err error
 var testParams = new(dbfvTestParameters)
 
 func init() {
-	testParams.parties = 2
+	testParams.parties = 5
 
 	testParams.contexts = bfv.DefaultParams
 }
@@ -69,6 +69,7 @@ func Test_DBFV(t *testing.T) {
 	t.Run("RotKeyGenRotCols", testRotKeyGenRotCols)
 	t.Run("Refresh", testRefresh)
 	t.Run("EncryptionToShares", testEncToShares)
+	t.Run("SharesToEncryption", testSharesToEnc)
 }
 
 func genDBFVTestContext(params *bfv.Parameters) (testCtx *dbfvTestContext) {
@@ -698,8 +699,8 @@ func testEncToShares(t *testing.T) {
 			type Party struct {
 				proto    *E2SProtocol
 				sk       *bfv.SecretKey
-				decShare E2SDecryptionShare
-				addShare AdditiveShare
+				decShare *E2SDecryptionShare
+				addShare *AdditiveShare
 			}
 
 			// Create parties
@@ -729,6 +730,66 @@ func testEncToShares(t *testing.T) {
 
 			// Verifies that msg = shareSum
 			if !shareSum.Equal(msg) {
+				t.Fail()
+			}
+		})
+	}
+}
+
+func testSharesToEnc(t *testing.T) {
+	nbParties := testParams.parties
+
+	for _, parameters := range testParams.contexts {
+		testCtx := genDBFVTestContext(parameters)
+
+		sk0Shards := testCtx.sk0Shards
+		sigmaSmudging := parameters.Sigma //TODO: how to set this?
+
+		plain := bfv.NewPlaintext(parameters)
+		cipher := bfv.NewCiphertext(parameters, 1)
+		crs := testCtx.contextQ.NewUniformPoly()
+
+		t.Run(testString("", nbParties, parameters), func(t *testing.T) {
+			type Party struct {
+				otherProto *E2SProtocol
+				proto      *S2EProtocol
+				sk         *bfv.SecretKey
+				addShare   *AdditiveShare
+				reencShare *S2EReencryptionShare
+			}
+
+			// Create parties
+			parties := make([]*Party, nbParties)
+			for i := uint64(0); i < nbParties; i++ {
+				p := new(Party)
+				p.otherProto = NewE2SProtocol(parameters, sigmaSmudging)
+				p.proto = NewS2EProtocol(parameters, sigmaSmudging)
+				p.sk = sk0Shards[i]
+				p.addShare = p.otherProto.AllocateAddShare()
+				p.reencShare = p.proto.AllocateShare()
+				parties[i] = p
+			}
+
+			msg := parties[0].otherProto.AllocateAddShare()
+			reencShareSum := parties[0].proto.AllocateShare()
+
+			// Each slave runs the S2E protocol
+			for _, p := range parties {
+				// Build the msg
+				p.addShare.elem = testCtx.contextT.NewUniformPoly()
+				p.otherProto.SumAdditiveShares(msg, p.addShare, msg)
+
+				// Aggregate re-encryption shares
+				p.proto.GenShare(p.sk, crs, p.addShare, p.reencShare)
+				p.proto.AggregateShares(reencShareSum, p.reencShare, reencShareSum)
+			}
+
+			cipher = parties[0].proto.Reencrypt(reencShareSum, crs)
+			testCtx.decryptorSk0.Decrypt(cipher, plain)
+			decoded := testCtx.encoder.DecodeUint(plain)
+
+			// Verifies that msg = decoded
+			if !msg.Equal(decoded) {
 				t.Fail()
 			}
 		})

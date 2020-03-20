@@ -39,12 +39,12 @@ func NewS2EProtocol(params *bfv.Parameters, sigmaSmudging float64) *S2EProtocol 
 }
 
 //AllocateShare allocates a re-encryption share.
-func (s2e *S2EProtocol) AllocateShare() S2EReencryptionShare {
-	return S2EReencryptionShare{s2e.cks.AllocateShare()}
+func (s2e *S2EProtocol) AllocateShare() *S2EReencryptionShare {
+	return &S2EReencryptionShare{s2e.cks.AllocateShare()}
 }
 
 //GenShare generates the re-encryption share, given the output secret key, the additive share, and the crs.
-func (s2e *S2EProtocol) GenShare(sk *bfv.SecretKey, crs *ring.Poly, addShare AdditiveShare, shareOut S2EReencryptionShare) {
+func (s2e *S2EProtocol) GenShare(sk *bfv.SecretKey, crs *ring.Poly, addShare *AdditiveShare, shareOut *S2EReencryptionShare) {
 	//First step is to run the CKS protocol, on a crafted ciphertext, with s_in = 0.
 	//First, craft the ciphertext.
 	s2e.encoder.EncodeUint(addShare.elem.GetCoefficients()[0], s2e.plain) //Store delta*M_i, which will be ct[0]
@@ -59,12 +59,12 @@ func (s2e *S2EProtocol) GenShare(sk *bfv.SecretKey, crs *ring.Poly, addShare Add
 }
 
 //AggregateShares pretty much describes itself. It is safe to have shareOut coincide with share1 or share2.
-func (s2e *S2EProtocol) AggregateShares(share1, share2, shareOut S2EReencryptionShare) {
+func (s2e *S2EProtocol) AggregateShares(share1, share2, shareOut *S2EReencryptionShare) {
 	s2e.cks.context.contextQ.Add(share1.Poly, share2.Poly, shareOut.Poly)
 }
 
 //Reencrypt takes the aggregate of all re-encryption share and the crs to build a (fresh) encryption
-func (s2e *S2EProtocol) Reencrypt(shareAgg S2EReencryptionShare, crs *ring.Poly) (ct *bfv.Ciphertext) {
+func (s2e *S2EProtocol) Reencrypt(shareAgg *S2EReencryptionShare, crs *ring.Poly) (ct *bfv.Ciphertext) {
 	ct = bfv.NewCiphertext(s2e.cks.context.params, 1)
 	ct.SetValue([]*ring.Poly{shareAgg.Poly, crs})
 

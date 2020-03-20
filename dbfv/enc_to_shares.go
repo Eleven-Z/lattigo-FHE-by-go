@@ -52,22 +52,22 @@ func NewE2SProtocol(params *bfv.Parameters, sigmaSmudging float64) *E2SProtocol 
 }
 
 // AllocateShares allocates both shares: they are both needed by both leaves and slaves.
-func (e2s *E2SProtocol) AllocateShares() (E2SDecryptionShare, AdditiveShare) {
+func (e2s *E2SProtocol) AllocateShares() (*E2SDecryptionShare, *AdditiveShare) {
 	return e2s.AllocateDecShare(), e2s.AllocateAddShare()
 }
 
 // AllocateDecShare allocates only a decryption share: needed as an intermediate buffer.
-func (e2s *E2SProtocol) AllocateDecShare() E2SDecryptionShare {
-	return E2SDecryptionShare{e2s.cks.AllocateShare()}
+func (e2s *E2SProtocol) AllocateDecShare() *E2SDecryptionShare {
+	return &E2SDecryptionShare{e2s.cks.AllocateShare()}
 }
 
 // AllocateAddShare allocates only an additive share.
-func (e2s *E2SProtocol) AllocateAddShare() AdditiveShare {
-	return AdditiveShare{e2s.cks.context.contextT.NewPoly()}
+func (e2s *E2SProtocol) AllocateAddShare() *AdditiveShare {
+	return &AdditiveShare{e2s.cks.context.contextT.NewPoly()}
 }
 
 // GenSharesSlave is to be called by slaves to generate both the decryption share and the additive share.
-func (e2s *E2SProtocol) GenSharesSlave(sk *bfv.SecretKey, ct *bfv.Ciphertext, decShareOut E2SDecryptionShare, addShareOut AdditiveShare) {
+func (e2s *E2SProtocol) GenSharesSlave(sk *bfv.SecretKey, ct *bfv.Ciphertext, decShareOut *E2SDecryptionShare, addShareOut *AdditiveShare) {
 	//First step is to run the CKS protocol with s_out = 0
 	e2s.cks.GenShare(sk.Get(), e2s.cks.context.contextQ.NewPoly(), ct, decShareOut.CKSShare)
 
@@ -86,7 +86,7 @@ func (e2s *E2SProtocol) GenSharesSlave(sk *bfv.SecretKey, ct *bfv.Ciphertext, de
 
 //GenShareMaster is to be called by the master after aggregating all the slaves' decryption shares
 //to get its own additive share
-func (e2s *E2SProtocol) GenShareMaster(sk *bfv.SecretKey, ct *bfv.Ciphertext, decShareAgg E2SDecryptionShare, addShareOut AdditiveShare) {
+func (e2s *E2SProtocol) GenShareMaster(sk *bfv.SecretKey, ct *bfv.Ciphertext, decShareAgg *E2SDecryptionShare, addShareOut *AdditiveShare) {
 	//First, we prepare the ciphertext to decrypt
 	e2s.cks.context.contextQ.Copy(ct.Value()[0], e2s.poly)
 	e2s.cks.context.contextQ.Add(e2s.poly, decShareAgg.Poly, e2s.poly) //ct[0] += sum(h_i)
@@ -105,19 +105,19 @@ func (e2s *E2SProtocol) GenShareMaster(sk *bfv.SecretKey, ct *bfv.Ciphertext, de
 }
 
 //AggregateDecryptionShares pretty much describes itself. It is safe to have shareOut coincide with share1 or share2.
-func (e2s *E2SProtocol) AggregateDecryptionShares(share1, share2, shareOut E2SDecryptionShare) {
+func (e2s *E2SProtocol) AggregateDecryptionShares(share1, share2, shareOut *E2SDecryptionShare) {
 	e2s.cks.context.contextQ.Add(share1.Poly, share2.Poly, shareOut.Poly)
 }
 
 /******** Operations on additive shares********/
 
 // SumAdditiveShares describes itself. It is safe to have shareOut coincide with either share1 or share2.
-func (e2s *E2SProtocol) SumAdditiveShares(share1, share2, shareOut AdditiveShare) {
+func (e2s *E2SProtocol) SumAdditiveShares(share1, share2, shareOut *AdditiveShare) {
 	e2s.cks.context.contextT.Add(share1.elem, share2.elem, shareOut.elem)
 }
 
 //Equals compares coefficient-wise
-func (x AdditiveShare) Equal(m []uint64) bool {
+func (x *AdditiveShare) Equal(m []uint64) bool {
 	xcoeffs := x.elem.GetCoefficients()[0]
 
 	if len(xcoeffs) != len(m) {
