@@ -129,12 +129,12 @@ func (rfp *RefreshProtocol) GenShares(sk *ring.Poly, ciphertext *bfv.Ciphertext,
 		tmphP := rfp.hP.Coeffs[x]
 		tmp1 := rfp.tmp1.Coeffs[i]
 		for j := uint64(0); j < contextQ.N; j++ {
-			tmphP[j] += tmp1[j] //TODO: what?
+			tmphP[j] += tmp1[j]
 		}
 	}
 
 	// h0 = (s*ct[1]*P + e)/P
-	rfp.baseconverter.ModDownSplitedPQ(level, share.RefreshShareDecrypt, rfp.hP, share.RefreshShareDecrypt) //TODO: why rfp.hP, what is ModDown?
+	rfp.baseconverter.ModDownSplitedPQ(level, share.RefreshShareDecrypt, rfp.hP, share.RefreshShareDecrypt)
 
 	// h1 = -s*a
 	contextKeys.NTT(crs, rfp.tmp1)

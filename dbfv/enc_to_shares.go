@@ -16,7 +16,7 @@ import (
 //E2SProtocol contains all the parameters needed to perform the various steps of the protocol.
 type E2SProtocol struct {
 	cks     *CKSProtocol //CKSProtocol is not embedded to have control over the exposed methods
-	encoder bfv.Encoder  //TODO: is this right?
+	encoder bfv.Encoder
 
 	//Just memory pools
 	plain  *bfv.Plaintext
@@ -75,8 +75,7 @@ func (e2s *E2SProtocol) GenSharesSlave(sk *bfv.SecretKey, ct *bfv.Ciphertext, de
 	addShareOut.elem = e2s.cks.context.contextT.NewUniformPoly()
 
 	//We encode M_i, so as to get delta*M_i in the InvNTT domain (where the ciphertext lies)
-	e2s.encoder.EncodeUint(addShareOut.elem.GetCoefficients()[0], e2s.plain) //TODO: is this right?
-	//lift(addShareOut.elem, e2s.deltaM, e2s.cks.context)
+	e2s.encoder.EncodeUint(addShareOut.elem.GetCoefficients()[0], e2s.plain)
 
 	//We subtract delta*M_i to the decryption share
 	e2s.cks.context.contextQ.Sub(decShareOut.Poly, e2s.plain.Value()[0], decShareOut.Poly)
@@ -99,7 +98,6 @@ func (e2s *E2SProtocol) GenShareMaster(sk *bfv.SecretKey, ct *bfv.Ciphertext, de
 
 	//As a last step, we decode the plaintext obtained, since we want the shares to be additive in Z_t^n
 	addShareOut.elem.SetCoefficients([][]uint64{e2s.encoder.DecodeUint(e2s.plain)})
-	//e2s.scaler.Scale(e2s.plain.Value()[0], addShareOut.elem)
 
 	return
 }

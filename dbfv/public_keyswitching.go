@@ -104,7 +104,7 @@ func (pcks *PCKSProtocol) AllocateShares() (s PCKSShare) {
 
 // GenShare is the first part of the unique round of the PCKSProtocol protocol. Each party computes the following :
 //
-// [s_i * ctx[1] + (u_i * pk[0] + e_0i)/P, (u_i * pk[1] + e_1i)/P]	//TODO: what's this /P?
+// [s_i * ctx[1] + (u_i * pk[0] + e_0i)/P, (u_i * pk[1] + e_1i)/P]
 //
 // and broadcasts the result to the other j-1 parties.
 func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Ciphertext, shareOut PCKSShare) {
@@ -112,7 +112,7 @@ func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Cip
 	contextQ := pcks.context.contextQ
 	contextKeys := pcks.context.contextQP
 
-	contextKeys.SampleTernaryMontgomeryNTT(pcks.tmp, 0.5) //TODO: do Montgomery and NTT commute?
+	contextKeys.SampleTernaryMontgomeryNTT(pcks.tmp, 0.5)
 
 	// h_0 = u_i * pk_0
 	contextKeys.MulCoeffsMontgomery(pcks.tmp, pk.Get()[0], pcks.share0tmp)
@@ -137,7 +137,7 @@ func (pcks *PCKSProtocol) GenShare(sk *ring.Poly, pk *bfv.PublicKey, ct *bfv.Cip
 	// tmp = s_i*c_1
 	contextQ.NTT(ct.Value()[1], pcks.tmp)
 	contextQ.MulCoeffsMontgomery(pcks.tmp, sk, pcks.tmp)
-	contextQ.InvNTT(pcks.tmp, pcks.tmp) //TODO: is only sk in Montgomery form (or ct[0] and ct[1] as well)?
+	contextQ.InvNTT(pcks.tmp, pcks.tmp)
 
 	// h_0 = s_i*c_1 + (u_i * pk_0 + e0)/P
 	contextQ.Add(shareOut[0], pcks.tmp, shareOut[0])

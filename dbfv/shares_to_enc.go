@@ -15,7 +15,7 @@ import (
 //S2EProtocol contains all the parameters needed to perform the various steps of the protocol.
 type S2EProtocol struct {
 	cks     *CKSProtocol //CKSProtocol is not embedded to have control over the exposed methods
-	encoder bfv.Encoder  //TODO: is this right?
+	encoder bfv.Encoder
 
 	//Memory pools
 	plain  *bfv.Plaintext

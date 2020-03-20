@@ -91,7 +91,7 @@ func (keygen *keyGenerator) GenSecretKey() (sk *SecretKey) {
 // GenSecretkeyWithDistrib creates a new SecretKey with the distribution [(1-p)/2, p, (1-p)/2].
 func (keygen *keyGenerator) GenSecretkeyWithDistrib(p float64) (sk *SecretKey) {
 	sk = new(SecretKey)
-	sk.sk = keygen.bfvContext.contextQP.SampleTernaryMontgomeryNTTNew(p) //TODO: so sk is NTT and Montgomery: do they commute?
+	sk.sk = keygen.bfvContext.contextQP.SampleTernaryMontgomeryNTTNew(p)
 	return sk
 }
 
@@ -129,7 +129,7 @@ func (keygen *keyGenerator) GenPublicKey(sk *SecretKey) (pk *PublicKey) {
 	pk.pk[0] = keygen.bfvContext.gaussianSampler.SampleNTTNew()
 	pk.pk[1] = ringContext.NewUniformPoly()
 
-	ringContext.MulCoeffsMontgomeryAndAdd(sk.sk, pk.pk[1], pk.pk[0]) //TODO: so pk is definitely NTT: is it also Montgomery?
+	ringContext.MulCoeffsMontgomeryAndAdd(sk.sk, pk.pk[1], pk.pk[0])
 	ringContext.Neg(pk.pk[0], pk.pk[0])
 
 	return pk

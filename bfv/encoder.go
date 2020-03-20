@@ -133,7 +133,7 @@ func (encoder *encoder) encodePlaintext(p *Plaintext) {
 		for j := uint64(0); j < ringContext.N; j++ {
 			tmp1[j] = ring.MRed(tmp2[j], deltaMont, qi, bredParams)
 		}
-	} //TODO: so a plaintext is NTT^-1, and in normal form (not Montgomery)?
+	}
 }
 
 // DecodeUint decodes a batched plaintext and returns the coefficients in a uint64 slice.
