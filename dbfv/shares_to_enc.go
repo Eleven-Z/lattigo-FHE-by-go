@@ -70,3 +70,10 @@ func (s2e *S2EProtocol) Reencrypt(shareAgg *S2EReencryptionShare, crs *ring.Poly
 
 	return
 }
+
+/******** Operations on additive shares********/
+
+func (s2e *S2EProtocol) GenRandomAddShare() *AdditiveShare {
+	poly := s2e.cks.context.contextT.NewUniformPoly()
+	return &AdditiveShare{poly}
+}

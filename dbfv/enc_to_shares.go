@@ -32,6 +32,12 @@ type E2SDecryptionShare struct {
 	CKSShare
 }
 
+// TODO: when is a MarshalBinary needed?
+// UnmarshalBinary decodes a previously marshaled share on the target share.
+func (share *E2SDecryptionShare) UnmarshalBinary(data []byte) error {
+	return (&share.CKSShare).UnmarshalBinary(data)
+}
+
 //AdditiveShare represents the additive share of the plaintext the party possesses after running the protocol.
 //The additive shares are elements of Z_t^n, and add up to the original clear vector, not to its plaintext-encoding.
 type AdditiveShare struct {
@@ -114,7 +120,7 @@ func (e2s *E2SProtocol) SumAdditiveShares(share1, share2, shareOut *AdditiveShar
 	e2s.cks.context.contextT.Add(share1.elem, share2.elem, shareOut.elem)
 }
 
-//Equals compares coefficient-wise
+// Equal compares coefficient-wise
 func (x *AdditiveShare) Equal(m []uint64) bool {
 	xcoeffs := x.elem.GetCoefficients()[0]
 
@@ -129,4 +135,9 @@ func (x *AdditiveShare) Equal(m []uint64) bool {
 	}
 
 	return true
+}
+
+// GetCoeffs returns the coefficients (not copied)
+func (x *AdditiveShare) GetCoeffs() []uint64 {
+	return x.elem.Coeffs[0]
 }
