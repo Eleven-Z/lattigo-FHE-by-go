@@ -11,6 +11,7 @@ package dbfv
 import (
 	"github.com/ldsec/lattigo/bfv"
 	"github.com/ldsec/lattigo/ring"
+	"sync"
 )
 
 //E2SProtocol contains all the parameters needed to perform the various steps of the protocol.
@@ -140,4 +141,45 @@ func (x *AdditiveShare) Equal(m []uint64) bool {
 // GetCoeffs returns the coefficients (not copied)
 func (x *AdditiveShare) GetCoeffs() []uint64 {
 	return x.elem.Coeffs[0]
+}
+
+/******** Useful for tests ********/
+
+// Various goroutines, each running the protocol as a node, need to provide their AdditiveShare to
+// a common accumulator. The last one unlocks "done", awaking the master thread.
+type ConcurrentAdditiveShareAccum struct {
+	*sync.Mutex
+	*AdditiveShare
+	proto   *E2SProtocol // TODO: replace with context
+	missing int
+	done    *sync.Mutex
+}
+
+func NewConcurrentAdditiveShareAccum(params *bfv.Parameters, sigmaSmudging float64, nbParties int) *ConcurrentAdditiveShareAccum {
+	proto := NewE2SProtocol(params, sigmaSmudging)
+	c := &ConcurrentAdditiveShareAccum{
+		Mutex:         &sync.Mutex{},
+		AdditiveShare: proto.AllocateAddShare(),
+		proto:         proto,
+		missing:       nbParties,
+		done:          &sync.Mutex{},
+	}
+
+	c.done.Lock()
+	return c
+}
+
+func (accum *ConcurrentAdditiveShareAccum) Accumulate(share *AdditiveShare) {
+	accum.Lock()
+	defer accum.Unlock()
+
+	accum.proto.SumAdditiveShares(accum.AdditiveShare, share, accum.AdditiveShare)
+	accum.missing -= 1
+	if accum.missing == 0 {
+		accum.done.Unlock()
+	}
+}
+
+func (accum *ConcurrentAdditiveShareAccum) WaitDone() {
+	accum.done.Lock()
 }
